@@ -6,7 +6,7 @@ import { writeFile } from "fs/promises"
 import { join } from "path"
 import { existsSync, mkdirSync } from "fs"
 import { createHash } from "crypto"
-import type { Photo } from "@prisma/client"
+import type { Prisma } from "@prisma/client"
 
 export async function POST(req: NextRequest) {
   try {
@@ -44,9 +44,9 @@ export async function POST(req: NextRequest) {
       mkdirSync(uploadsDir, { recursive: true })
     }
 
-    type PhotoWithUploader = Photo & {
-      uploader: { name: string }
-    }
+    type PhotoWithUploader = Prisma.PhotoGetPayload<{
+      include: { uploader: { select: { name: true } } }
+    }>
     
     const createdPhotos: PhotoWithUploader[] = []
 
@@ -106,7 +106,7 @@ export async function POST(req: NextRequest) {
 
         // Check for duplicate file
         const existingPhoto = await prisma.photo.findFirst({
-          where: { fileHash } as any,
+          where: { fileHash } as Prisma.PhotoWhereInput,
         })
 
         if (existingPhoto) {
@@ -158,7 +158,7 @@ export async function POST(req: NextRequest) {
           penaltyEnabled: penaltyEnabled,
           penaltyPoints: penaltyPointsValue,
           maxAttempts: maxAttemptsValue,
-        } as any,
+        } as Prisma.PhotoUncheckedCreateInput,
         include: {
           uploader: {
             select: {
@@ -168,7 +168,7 @@ export async function POST(req: NextRequest) {
         },
       })
 
-      createdPhotos.push(photo as PhotoWithUploader)
+      createdPhotos.push(photo)
     }
 
     // Send emails to all other users for all photos

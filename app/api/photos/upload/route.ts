@@ -6,6 +6,7 @@ import { writeFile } from "fs/promises"
 import { join } from "path"
 import { existsSync, mkdirSync } from "fs"
 import { createHash } from "crypto"
+import type { Prisma } from "@prisma/client"
 
 export async function POST(req: NextRequest) {
   try {
@@ -62,7 +63,7 @@ export async function POST(req: NextRequest) {
 
       // Check for duplicate file
       const existingPhoto = await prisma.photo.findFirst({
-        where: { fileHash } as any,
+        where: { fileHash } as Prisma.PhotoWhereInput,
       })
 
       if (existingPhoto) {
@@ -122,7 +123,7 @@ export async function POST(req: NextRequest) {
         answerName: answerName.trim(),
         points: pointsValue,
         maxAttempts: maxAttemptsValue,
-      } as any,
+      } as Prisma.PhotoUncheckedCreateInput,
       include: {
         uploader: {
           select: {

@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from "next/server"
 import { auth } from "@/lib/auth"
 import { prisma } from "@/lib/prisma"
 import { sendNewPhotoEmail } from "@/lib/email"
+import type { Prisma } from "@prisma/client"
 
 // Legacy endpoint for URL-based uploads (kept for backward compatibility)
 export async function POST(req: NextRequest) {
@@ -46,7 +47,7 @@ export async function POST(req: NextRequest) {
         answerName: answerName.trim(),
         points: pointsValue,
         maxAttempts: maxAttemptsValue,
-      } as any,
+      } as Prisma.PhotoUncheckedCreateInput,
       include: {
         uploader: {
           select: {
