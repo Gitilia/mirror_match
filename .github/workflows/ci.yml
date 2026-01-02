@@ -11,7 +11,8 @@ jobs:
   skip-ci-check:
     runs-on: ubuntu-latest
     outputs:
-      should-skip: ${{ steps.check.outputs.skip }}
+      # Default to 'false' if the step output is missing (some runners are picky)
+      should-skip: ${{ steps.check.outputs.skip || 'false' }}
     steps:
       - name: Check out code (for commit message)
         uses: actions/checkout@v4
@@ -22,7 +23,7 @@ jobs:
         id: check
         run: |
           # Default to not skipping
-          SKIP=0
+          SKIP=false
 
           # Simple skip pattern: @skipci (case-insensitive)
           SKIP_PATTERN="@skipci"
@@ -42,14 +43,14 @@ jobs:
           # Check branch name (case-insensitive)
           if echo "$BRANCH_NAME" | grep -qiF "$SKIP_PATTERN"; then
             echo "Skipping CI: branch name contains '$SKIP_PATTERN'"
-            SKIP=1
+            SKIP=true
           fi
 
           # Check commit message (case-insensitive)
-          if [ $SKIP -eq 0 ] && [ -n "$COMMIT_MSG" ]; then
+          if [ "$SKIP" = "false" ] && [ -n "$COMMIT_MSG" ]; then
             if echo "$COMMIT_MSG" | grep -qiF "$SKIP_PATTERN"; then
               echo "Skipping CI: commit message contains '$SKIP_PATTERN'"
-              SKIP=1
+              SKIP=true
             fi
           fi
 
@@ -63,7 +64,7 @@ jobs:
   lint-and-type-check:
     needs: skip-ci-check
     runs-on: ubuntu-latest
-    if: &should_run ${{ needs.skip-ci-check.outputs.should-skip != '1' }}
+    if: &should_run ${{ needs.skip-ci-check.outputs.should-skip != 'true' }}
     container:
       image: node:20-bullseye
     steps:
