@@ -2,7 +2,6 @@ import { NextRequest, NextResponse } from "next/server"
 import { auth } from "@/lib/auth"
 import { prisma } from "@/lib/prisma"
 import { sendNewPhotoEmail } from "@/lib/email"
-import type { Prisma } from "@prisma/client"
 
 // Legacy endpoint for URL-based uploads (kept for backward compatibility)
 export async function POST(req: NextRequest) {
@@ -47,7 +46,8 @@ export async function POST(req: NextRequest) {
         answerName: answerName.trim(),
         points: pointsValue,
         maxAttempts: maxAttemptsValue,
-      } as Prisma.PhotoUncheckedCreateInput,
+        // eslint-disable-next-line @typescript-eslint/no-explicit-any
+      } as any,
       include: {
         uploader: {
           select: {
@@ -73,7 +73,9 @@ export async function POST(req: NextRequest) {
     Promise.all(
       allUsers.map((user: { id: string; email: string; name: string }) =>
         sendNewPhotoEmail(user.email, user.name, photo.id, photo.uploader.name).catch(
-          (err) => console.error(`Failed to send email to ${user.email}:`, err)
+          (err) => {
+            console.error("Failed to send email to:", user.email, err)
+          }
         )
       )
     )

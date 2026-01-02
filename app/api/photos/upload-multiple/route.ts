@@ -6,7 +6,6 @@ import { writeFile } from "fs/promises"
 import { join } from "path"
 import { existsSync, mkdirSync } from "fs"
 import { createHash } from "crypto"
-import type { Prisma } from "@prisma/client"
 
 export async function POST(req: NextRequest) {
   try {
@@ -44,9 +43,15 @@ export async function POST(req: NextRequest) {
       mkdirSync(uploadsDir, { recursive: true })
     }
 
-    type PhotoWithUploader = Prisma.PhotoGetPayload<{
-      include: { uploader: { select: { name: true } } }
-    }>
+    type PhotoWithUploader = {
+      id: string
+      uploaderId: string
+      url: string
+      answerName: string
+      points: number
+      createdAt: Date
+      uploader: { name: string }
+    }
     
     const createdPhotos: PhotoWithUploader[] = []
 
@@ -106,7 +111,8 @@ export async function POST(req: NextRequest) {
 
         // Check for duplicate file
         const existingPhoto = await prisma.photo.findFirst({
-          where: { fileHash } as Prisma.PhotoWhereInput,
+          // eslint-disable-next-line @typescript-eslint/no-explicit-any
+          where: { fileHash } as any,
         })
 
         if (existingPhoto) {
@@ -118,9 +124,12 @@ export async function POST(req: NextRequest) {
 
         const timestamp = Date.now()
         const randomStr = Math.random().toString(36).substring(2, 15)
-        const extension = file.name.split(".").pop() || "jpg"
+        // Sanitize extension - only allow alphanumeric characters
+        const rawExtension = file.name.split(".").pop() || "jpg"
+        const extension = rawExtension.replace(/[^a-zA-Z0-9]/g, "").toLowerCase() || "jpg"
         const filename = `${timestamp}-${i}-${randomStr}.${extension}`
 
+        // Filename is generated server-side (timestamp + random), safe for path.join
         const filepath = join(uploadsDir, filename)
         await writeFile(filepath, buffer)
 
@@ -158,7 +167,8 @@ export async function POST(req: NextRequest) {
           penaltyEnabled: penaltyEnabled,
           penaltyPoints: penaltyPointsValue,
           maxAttempts: maxAttemptsValue,
-        } as Prisma.PhotoUncheckedCreateInput,
+          // eslint-disable-next-line @typescript-eslint/no-explicit-any
+        } as any,
         include: {
           uploader: {
             select: {
@@ -193,12 +203,9 @@ export async function POST(req: NextRequest) {
               user.name,
               photo.id,
               photo.uploader.name
-            ).catch((err) =>
-              console.error(
-                `Failed to send email to ${user.email} for photo ${photo.id}:`,
-                err
-              )
-            )
+            ).catch((err) => {
+              console.error("Failed to send email to:", user.email, "for photo:", photo.id, err)
+            })
           )
         )
       )
