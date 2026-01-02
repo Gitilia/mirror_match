@@ -11,7 +11,6 @@ jobs:
   skip-ci-check:
     runs-on: ubuntu-latest
     outputs:
-      # Default to 'false' if the step output is missing (some runners are picky)
       should-skip: ${{ steps.check.outputs.skip || 'false' }}
     steps:
       - name: Check out code (for commit message)
@@ -22,7 +21,6 @@ jobs:
       - name: Check if CI should be skipped
         id: check
         run: |
-          # Default to not skipping
           SKIP=false
 
           # Simple skip pattern: @skipci (case-insensitive)
@@ -54,9 +52,7 @@ jobs:
             fi
           fi
 
-          # Set outputs in both modern and legacy formats for wider runner compatibility
           echo "skip=$SKIP" >> "$GITHUB_OUTPUT"
-          echo "::set-output name=skip::$SKIP"
           echo "Branch: $BRANCH_NAME"
           echo "Commit: ${COMMIT_MSG:0:50}..."
           echo "Skip CI: $SKIP"
@@ -73,6 +69,11 @@ jobs:
 
       - name: Install dependencies
         run: npm ci
+
+      - name: Generate Prisma Client
+        run: npm run db:generate
+        env:
+          DATABASE_URL: postgresql://postgres:postgres@localhost:5432/mirrormatch?schema=public
 
       - name: Run ESLint
         run: npm run lint
