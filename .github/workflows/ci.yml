@@ -21,6 +21,9 @@ jobs:
       - name: Check if CI should be skipped
         id: check
         run: |
+          # Default to not skipping
+          SKIP=0
+
           # Simple skip pattern: @skipci (case-insensitive)
           SKIP_PATTERN="@skipci"
 
@@ -36,8 +39,6 @@ jobs:
             COMMIT_MSG=$(git log -1 --pretty=%B 2>/dev/null || echo "")
           fi
 
-          SKIP=0
-
           # Check branch name (case-insensitive)
           if echo "$BRANCH_NAME" | grep -qiF "$SKIP_PATTERN"; then
             echo "Skipping CI: branch name contains '$SKIP_PATTERN'"
@@ -52,7 +53,9 @@ jobs:
             fi
           fi
 
-          echo "skip=$SKIP" >> $GITHUB_OUTPUT
+          # Set outputs in both modern and legacy formats for wider runner compatibility
+          echo "skip=$SKIP" >> "$GITHUB_OUTPUT"
+          echo "::set-output name=skip::$SKIP"
           echo "Branch: $BRANCH_NAME"
           echo "Commit: ${COMMIT_MSG:0:50}..."
           echo "Skip CI: $SKIP"
@@ -60,7 +63,7 @@ jobs:
   lint-and-type-check:
     needs: skip-ci-check
     runs-on: ubuntu-latest
-    if: needs.skip-ci-check.outputs.should-skip != '1'
+    if: &should_run ${{ needs.skip-ci-check.outputs.should-skip != '1' }}
     container:
       image: node:20-bullseye
     steps:
@@ -79,7 +82,7 @@ jobs:
   test:
     needs: skip-ci-check
     runs-on: ubuntu-latest
-    if: needs.skip-ci-check.outputs.should-skip != '1'
+    if: *should_run
     container:
       image: node:20-bullseye
     services:
@@ -127,7 +130,7 @@ jobs:
   build:
     needs: skip-ci-check
     runs-on: ubuntu-latest
-    if: needs.skip-ci-check.outputs.should-skip != '1'
+    if: *should_run
     container:
       image: node:20-bullseye
     steps:
@@ -152,7 +155,7 @@ jobs:
 
   secret-scanning:
     needs: skip-ci-check
-    if: needs.skip-ci-check.outputs.should-skip != '1'
+    if: *should_run
     runs-on: ubuntu-latest
     container:
       image: zricethezav/gitleaks:latest
@@ -172,7 +175,7 @@ jobs:
 
   dependency-scan:
     needs: skip-ci-check
-    if: needs.skip-ci-check.outputs.should-skip != '1'
+    if: *should_run
     runs-on: ubuntu-latest
     container:
       image: aquasec/trivy:latest
@@ -206,7 +209,7 @@ jobs:
 
   sast-scan:
     needs: skip-ci-check
-    if: needs.skip-ci-check.outputs.should-skip != '1'
+    if: *should_run
     runs-on: ubuntu-latest
     container:
       image: ubuntu:22.04
