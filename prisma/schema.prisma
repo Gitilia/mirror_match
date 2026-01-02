@@ -1,0 +1,69 @@
+// This is your Prisma schema file,
+// learn more about it in the docs: https://pris.ly/d/prisma-schema
+
+generator client {
+  provider = "prisma-client-js"
+  output   = "../node_modules/@prisma/client/.prisma/client"
+}
+
+datasource db {
+  provider = "postgresql"
+}
+
+// Seed configuration
+// Run with: npm run db:seed
+
+model User {
+  id           String   @id @default(cuid())
+  name         String
+  email        String   @unique
+  passwordHash String
+  role         Role     @default(USER)
+  points       Int      @default(0)
+  createdAt    DateTime @default(now())
+  
+  uploadedPhotos Photo[] @relation("PhotoUploader")
+  guesses        Guess[]
+  
+  @@index([points])
+}
+
+model Photo {
+  id            String   @id @default(cuid())
+  uploaderId    String
+  uploader      User     @relation("PhotoUploader", fields: [uploaderId], references: [id])
+  url           String
+  fileHash      String?  // SHA256 hash of file content (null for URL uploads)
+  answerName    String
+  points        Int      @default(1)
+  penaltyEnabled Boolean @default(false)
+  penaltyPoints  Int      @default(0)
+  maxAttempts   Int?     // Maximum number of guesses allowed per user (null = unlimited)
+  createdAt     DateTime @default(now())
+  
+  guesses       Guess[]
+  
+  @@index([uploaderId])
+  @@index([createdAt])
+  @@index([url])
+  @@index([fileHash])
+}
+
+model Guess {
+  id         String   @id @default(cuid())
+  userId     String
+  user       User     @relation(fields: [userId], references: [id])
+  photoId    String
+  photo      Photo    @relation(fields: [photoId], references: [id])
+  guessText  String
+  correct    Boolean  @default(false)
+  createdAt  DateTime @default(now())
+  
+  @@index([userId])
+  @@index([photoId])
+}
+
+enum Role {
+  ADMIN
+  USER
+}

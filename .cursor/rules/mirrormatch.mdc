@@ -1,0 +1,191 @@
+# MirrorMatch Project Rules
+
+## Project Overview
+
+MirrorMatch is a photo guessing game where users upload photos and other users guess who is in the picture to earn points. The app features admin user management, email notifications, and a leaderboard system.
+
+**Core Goals:**
+- Simple, fun guessing game with photos
+- Admin-controlled user creation (no public signup)
+- Point-based scoring system
+- Email notifications for new photos
+- Clean, maintainable codebase
+
+## Tech Stack & Constraints
+
+### Required Technologies
+- **Next.js 16+** with App Router (not Pages Router)
+- **TypeScript** for all code
+- **PostgreSQL** as the only database
+- **Prisma** as the only ORM (no raw SQL or other ORMs)
+- **NextAuth.js** with credentials provider (email + password)
+- **Tailwind CSS** for styling
+- **Nodemailer** for email sending
+
+### Constraints
+- **No other databases or ORMs** - PostgreSQL + Prisma only
+- **No other auth providers** - NextAuth credentials only
+- **No file upload libraries** - use URL-based photo storage for now
+- **Server components by default** - use client components only when necessary
+
+## Architecture & Code Style
+
+### Next.js App Router Conventions
+- Use `app/` directory for all routes
+- Prefer **server components** by default
+- Use `"use client"` directive only when needed (forms, interactivity, hooks)
+- Use route handlers (`app/api/*/route.ts`) for API endpoints
+- Use server actions for mutations when appropriate
+
+### Database Access
+- **Always use Prisma** via `lib/prisma.ts` helper
+- Never write raw SQL queries
+- Never use other ORMs or database libraries
+- All database access should go through the Prisma client instance
+
+### Code Organization
+```
+app/              # Next.js App Router routes
+  api/           # API route handlers
+  [pages]/       # Page components (server components by default)
+components/      # Reusable React components
+lib/             # Utility functions and helpers
+  prisma.ts      # Prisma client instance (singleton)
+  auth.ts        # NextAuth configuration
+  email.ts       # Email utilities
+  utils.ts       # General utilities
+prisma/          # Prisma schema and migrations
+types/           # TypeScript type definitions
+```
+
+### Component Guidelines
+- **Small, composable components** - prefer many small components over large ones
+- **Server components by default** - only use client components for:
+  - Forms with state
+  - Interactive UI (buttons, modals)
+  - React hooks (useState, useEffect, etc.)
+  - Browser APIs
+- **Business logic in server actions or route handlers** - not in React components
+- Keep components focused on presentation
+
+### Validation
+- Use simple validation for forms and API inputs
+- Consider adding Zod for schema validation if needed
+- Always validate user input on the server side
+- Sanitize inputs before database operations
+
+## Security Guidelines
+
+### Password Handling
+- **Never expose password hashes** in API responses or logs
+- **Always hash passwords** using bcrypt (via `lib/utils.ts` `hashPassword` function)
+- **Never store plain text passwords**
+- **Never log passwords** or password hashes
+
+### Authentication & Authorization
+- **Protect admin-only routes** with role checks in middleware and route handlers
+- **Validate and authorize all mutations**:
+  - Photo uploads (must be logged in)
+  - Guess submissions (must be logged in, can't guess own photos)
+  - User updates (users can only update themselves, admins can update anyone)
+- **Always check session** in API routes before processing requests
+- **Use NextAuth session** for user identity, never trust client-provided user IDs
+
+### Route Protection
+- Admin routes (`/admin/*`) require `role === "ADMIN"`
+- All app routes except `/login` require authentication
+- API routes should check authorization before processing
+
+### Data Validation
+- Validate all user inputs
+- Sanitize data before database operations
+- Use Prisma's type safety to prevent SQL injection
+- Never trust client-side validation alone
+
+## Behavioral Rules for AI Tools (Cursor)
+
+### Before Making Changes
+1. **Read core documentation first:**
+   - `README.md` - Setup and usage
+   - `ARCHITECTURE.md` - System design and data flow
+   - `.cursor/rules/mirrormatch.mdc` (this file) - Project rules
+   - `CONTRIBUTING.md` - Coding conventions
+   - `SECURITY.md` - Security practices
+
+2. **Understand the existing codebase:**
+   - Review related files before modifying
+   - Understand data models in `prisma/schema.prisma`
+   - Check existing patterns in similar features
+
+3. **Follow established patterns:**
+   - Use existing component patterns
+   - Follow the same structure for new API routes
+   - Maintain consistency with existing code style
+
+### When Adding Features
+- **Update documentation** when behavior or APIs change
+- **Keep docs in sync** - if you change architecture, update ARCHITECTURE.md
+- **Add comments** for complex logic
+- **Use TypeScript types** - avoid `any` types
+- **Follow naming conventions** - camelCase for variables, PascalCase for components
+
+### When Something is Ambiguous
+- **Pick a sensible default** that aligns with existing patterns
+- **Document the decision** in relevant MD files
+- **Ask for clarification** only if multiple valid approaches exist and the choice significantly impacts the system
+
+### Code Quality
+- **Prefer incremental changes** - small, focused commits
+- **Write clear commit messages**
+- **Keep functions focused** - single responsibility
+- **Use meaningful variable names**
+- **Add error handling** for all async operations
+
+## Data Model Summary
+
+### User
+- `id`, `name`, `email` (unique), `passwordHash`, `role` (ADMIN | USER), `points`, `createdAt`
+- Relations: `uploadedPhotos`, `guesses`
+
+### Photo
+- `id`, `uploaderId`, `url`, `answerName`, `createdAt`
+- Relations: `uploader` (User), `guesses`
+
+### Guess
+- `id`, `userId`, `photoId`, `guessText`, `correct` (boolean), `createdAt`
+- Relations: `user` (User), `photo` (Photo)
+- Indexed on `userId` and `photoId`
+
+## Key Workflows
+
+### User Creation (Admin Only)
+1. Admin creates user via `/admin` page
+2. User receives temporary password
+3. User logs in and can change password
+
+### Photo Upload Flow
+1. User uploads photo (URL) with `answerName`
+2. Photo record created in database
+3. Email notifications sent to all other users
+4. Users can view and guess
+
+### Guess Flow
+1. User views photo at `/photos/[id]`
+2. User submits guess
+3. System checks if guess matches `answerName` (case-insensitive, trimmed)
+4. If correct: create Guess with `correct: true`, increment user points
+5. If wrong: create Guess with `correct: false`
+6. User sees feedback immediately
+
+## Important Reminders
+
+- **Always read documentation before making large changes**
+- **Keep documentation updated when behavior changes**
+- **Follow security guidelines strictly**
+- **Use Prisma for all database access**
+- **Prefer server components, use client components only when needed**
+- **Validate and authorize all user actions**
+
+---
+
+**Last Updated:** When architecture or rules change, update this file and notify the team.

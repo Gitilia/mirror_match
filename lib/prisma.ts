@@ -1,0 +1,46 @@
+import { PrismaClient } from '@prisma/client'
+import { PrismaPg } from '@prisma/adapter-pg'
+import { Pool } from 'pg'
+
+const globalForPrisma = globalThis as unknown as {
+  prisma: PrismaClient | undefined
+}
+
+const connectionString = process.env.DATABASE_URL
+
+if (!connectionString) {
+  throw new Error('DATABASE_URL environment variable is not set')
+}
+
+// Handle Prisma Postgres URLs (prisma+postgres://) vs standard PostgreSQL URLs
+let pool: Pool
+if (connectionString.startsWith('prisma+postgres://')) {
+  // For Prisma managed Postgres, extract the actual postgres URL from the API key
+  try {
+    const urlMatch = connectionString.match(/api_key=([^"&]+)/)
+    if (urlMatch) {
+      const apiKey = decodeURIComponent(urlMatch[1])
+      const decoded = JSON.parse(Buffer.from(apiKey, 'base64').toString())
+      if (decoded.databaseUrl) {
+        pool = new Pool({ connectionString: decoded.databaseUrl })
+      } else if (decoded.shadowDatabaseUrl) {
+        pool = new Pool({ connectionString: decoded.shadowDatabaseUrl })
+      } else {
+        throw new Error('Could not extract database URL from Prisma Postgres connection string')
+      }
+    } else {
+      throw new Error('Invalid Prisma Postgres connection string format')
+    }
+  } catch (error) {
+    console.error('Error parsing Prisma Postgres URL:', error)
+    throw new Error('Failed to parse Prisma Postgres connection string. Consider using a standard PostgreSQL connection string.')
+  }
+} else {
+  // Standard PostgreSQL connection
+  pool = new Pool({ connectionString })
+}
+
+const adapter = new PrismaPg(pool)
+export const prisma = globalForPrisma.prisma ?? new PrismaClient({ adapter })
+
+if (process.env.NODE_ENV !== 'production') globalForPrisma.prisma = prisma
