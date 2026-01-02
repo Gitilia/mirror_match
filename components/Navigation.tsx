@@ -29,14 +29,14 @@ export default function Navigation() {
 
   return (
     <>
-      <nav className="sticky top-0 z-50 bg-gradient-to-r from-purple-600 to-indigo-600 text-white shadow-lg">
+      <nav className="sticky top-0 z-50 bg-gradient-to-r from-purple-600 to-indigo-600 text-white shadow-lg relative">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
           <div className="flex justify-between items-center h-16">
             {/* Logo and Menu Button */}
             <div className="flex items-center space-x-4">
               <button
                 onClick={() => setSideMenuOpen(!sideMenuOpen)}
-                className="menu-button p-2 rounded-md hover:bg-purple-700 focus:outline-none focus:ring-2 focus:ring-white"
+                className="menu-button p-2 rounded-md hover:bg-purple-700 focus:outline-none focus:ring-2 focus:ring-white relative z-10"
                 aria-label="Toggle menu"
               >
                 <svg
@@ -51,29 +51,31 @@ export default function Navigation() {
                   <path d="M4 6h16M4 12h16M4 18h16" />
                 </svg>
               </button>
-              <Link href="/" className="text-xl font-bold">
+              <Link href="/" className="text-xl font-bold relative z-10">
                 MirrorMatch
               </Link>
             </div>
 
             {/* Main Actions - Always Visible */}
-            <div className="flex items-center space-x-4">
+            <div className="flex items-center space-x-4 relative z-10">
               <Link
                 href="/upload"
-                className="hover:bg-purple-700 px-3 py-2 rounded-md text-sm font-medium transition whitespace-nowrap"
+                className="hover:bg-purple-700 px-3 py-2 rounded-md text-sm font-medium transition whitespace-nowrap relative z-10"
+                onClick={() => setSideMenuOpen(false)}
               >
                 Upload
               </Link>
               <Link
                 href="/leaderboard"
-                className="hover:bg-purple-700 px-3 py-2 rounded-md text-sm font-medium transition whitespace-nowrap"
+                className="hover:bg-purple-700 px-3 py-2 rounded-md text-sm font-medium transition whitespace-nowrap relative z-10"
+                onClick={() => setSideMenuOpen(false)}
               >
                 Leaderboard
               </Link>
             </div>
 
             {/* User Info */}
-            <div className="flex items-center">
+            <div className="flex items-center relative z-10">
               <span className="text-sm">Hello, {session.user.name}</span>
             </div>
           </div>
@@ -82,7 +84,7 @@ export default function Navigation() {
 
       {/* Side Menu */}
       <div
-        className={`side-menu fixed top-16 left-0 h-[calc(100vh-4rem)] w-64 bg-white shadow-xl z-40 transform transition-transform duration-300 ease-in-out flex flex-col ${
+        className={`side-menu fixed top-16 left-0 h-[calc(100vh-4rem)] w-64 bg-white shadow-xl z-30 transform transition-transform duration-300 ease-in-out flex flex-col ${
           sideMenuOpen ? "translate-x-0" : "-translate-x-full"
         }`}
       >
@@ -154,7 +156,7 @@ export default function Navigation() {
       {/* Overlay for mobile */}
       {sideMenuOpen && (
         <div
-          className="fixed inset-0 bg-black bg-opacity-50 z-30 sm:hidden"
+          className="fixed inset-0 bg-black bg-opacity-50 z-20 sm:hidden"
           onClick={() => setSideMenuOpen(false)}
         />
       )}
