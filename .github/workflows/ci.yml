@@ -1,3 +1,4 @@
+# CI (triggered)
 name: CI
 
 on:
