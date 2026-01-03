@@ -49,10 +49,17 @@ export default async function PhotoPage({ params }: { params: Promise<{ id: stri
   const hasCorrectGuess = userGuess?.correct || false
   const isOwner = photo.uploaderId === session.user.id
   
+  // Type assertion for new fields (penaltyEnabled, penaltyPoints, maxAttempts)
+  type PhotoWithNewFields = typeof photo & {
+    penaltyEnabled: boolean
+    penaltyPoints: number
+    maxAttempts: number | null
+  }
+  const photoWithFields = photo as PhotoWithNewFields
+  
   // Calculate remaining attempts
-  const photoWithMaxAttempts = photo as typeof photo & { maxAttempts: number | null | undefined }
   const userGuessCount = photo.guesses.length
-  const maxAttempts = photoWithMaxAttempts.maxAttempts ?? null
+  const maxAttempts = photoWithFields.maxAttempts ?? null
   const remainingAttempts = maxAttempts !== null && maxAttempts > 0 
     ? Math.max(0, maxAttempts - userGuessCount)
     : null
@@ -77,9 +84,9 @@ export default async function PhotoPage({ params }: { params: Promise<{ id: stri
               <span className="inline-flex items-center px-3 py-1 rounded-full text-sm font-medium bg-purple-100 text-purple-800">
                 +{photo.points} {photo.points === 1 ? "point" : "points"} if correct
               </span>
-              {(photo as any).penaltyEnabled && (photo as any).penaltyPoints > 0 && (
+              {photoWithFields.penaltyEnabled && photoWithFields.penaltyPoints > 0 && (
                 <span className="inline-flex items-center px-3 py-1 rounded-full text-sm font-medium bg-red-100 text-red-800">
-                  -{(photo as any).penaltyPoints} {(photo as any).penaltyPoints === 1 ? "point" : "points"} if wrong
+                  -{photoWithFields.penaltyPoints} {photoWithFields.penaltyPoints === 1 ? "point" : "points"} if wrong
                 </span>
               )}
               {maxAttempts !== null && maxAttempts > 0 && (
@@ -117,9 +124,9 @@ export default async function PhotoPage({ params }: { params: Promise<{ id: stri
                 <p className="text-sm text-red-700 mt-1">
                   Your last guess: <strong>{userGuess.guessText}</strong>
                 </p>
-                {(photo as any).penaltyEnabled && (photo as any).penaltyPoints > 0 && (
+                {photoWithFields.penaltyEnabled && photoWithFields.penaltyPoints > 0 && (
                   <p className="text-sm text-red-700 mt-1">
-                    You lost <strong>{(photo as any).penaltyPoints} {(photo as any).penaltyPoints === 1 ? "point" : "points"}</strong> for this wrong guess.
+                    You lost <strong>{photoWithFields.penaltyPoints} {photoWithFields.penaltyPoints === 1 ? "point" : "points"}</strong> for this wrong guess.
                   </p>
                 )}
               </div>

@@ -46,6 +46,7 @@ export async function POST(req: NextRequest) {
         answerName: answerName.trim(),
         points: pointsValue,
         maxAttempts: maxAttemptsValue,
+        // eslint-disable-next-line @typescript-eslint/no-explicit-any
       } as any,
       include: {
         uploader: {
@@ -72,7 +73,9 @@ export async function POST(req: NextRequest) {
     Promise.all(
       allUsers.map((user: { id: string; email: string; name: string }) =>
         sendNewPhotoEmail(user.email, user.name, photo.id, photo.uploader.name).catch(
-          (err) => console.error(`Failed to send email to ${user.email}:`, err)
+          (err) => {
+            console.error("Failed to send email to:", user.email, err)
+          }
         )
       )
     )

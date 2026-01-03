@@ -1,3 +1,4 @@
+# CI (triggered)
 name: CI
 
 on:
@@ -11,7 +12,7 @@ jobs:
   skip-ci-check:
     runs-on: ubuntu-latest
     outputs:
-      should-skip: ${{ steps.check.outputs.skip }}
+      should-skip: ${{ steps.check.outputs.skip || 'false' }}
     steps:
       - name: Check out code (for commit message)
         uses: actions/checkout@v4
@@ -21,6 +22,8 @@ jobs:
       - name: Check if CI should be skipped
         id: check
         run: |
+          SKIP=false
+
           # Simple skip pattern: @skipci (case-insensitive)
           SKIP_PATTERN="@skipci"
 
@@ -36,23 +39,21 @@ jobs:
             COMMIT_MSG=$(git log -1 --pretty=%B 2>/dev/null || echo "")
           fi
 
-          SKIP=0
-
           # Check branch name (case-insensitive)
           if echo "$BRANCH_NAME" | grep -qiF "$SKIP_PATTERN"; then
             echo "Skipping CI: branch name contains '$SKIP_PATTERN'"
-            SKIP=1
+            SKIP=true
           fi
 
           # Check commit message (case-insensitive)
-          if [ $SKIP -eq 0 ] && [ -n "$COMMIT_MSG" ]; then
+          if [ "$SKIP" = "false" ] && [ -n "$COMMIT_MSG" ]; then
             if echo "$COMMIT_MSG" | grep -qiF "$SKIP_PATTERN"; then
               echo "Skipping CI: commit message contains '$SKIP_PATTERN'"
-              SKIP=1
+              SKIP=true
             fi
           fi
 
-          echo "skip=$SKIP" >> $GITHUB_OUTPUT
+          echo "skip=$SKIP" >> "$GITHUB_OUTPUT"
           echo "Branch: $BRANCH_NAME"
           echo "Commit: ${COMMIT_MSG:0:50}..."
           echo "Skip CI: $SKIP"
@@ -60,7 +61,7 @@ jobs:
   lint-and-type-check:
     needs: skip-ci-check
     runs-on: ubuntu-latest
-    if: needs.skip-ci-check.outputs.should-skip != '1'
+    if: &should_run ${{ needs.skip-ci-check.outputs.should-skip != 'true' }}
     container:
       image: node:20-bullseye
     steps:
@@ -69,6 +70,11 @@ jobs:
 
       - name: Install dependencies
         run: npm ci
+
+      - name: Generate Prisma Client
+        run: npm run db:generate
+        env:
+          DATABASE_URL: postgresql://postgres:postgres@localhost:5432/mirrormatch?schema=public
 
       - name: Run ESLint
         run: npm run lint
@@ -79,7 +85,7 @@ jobs:
   test:
     needs: skip-ci-check
     runs-on: ubuntu-latest
-    if: needs.skip-ci-check.outputs.should-skip != '1'
+    if: *should_run
     container:
       image: node:20-bullseye
     services:
@@ -127,7 +133,7 @@ jobs:
   build:
     needs: skip-ci-check
     runs-on: ubuntu-latest
-    if: needs.skip-ci-check.outputs.should-skip != '1'
+    if: *should_run
     container:
       image: node:20-bullseye
     steps:
@@ -139,6 +145,9 @@ jobs:
 
       - name: Generate Prisma Client
         run: npm run db:generate
+        env:
+          # Use the same connection string we provide to the build step so Prisma can generate types
+          DATABASE_URL: postgresql://postgres:postgres@localhost:5432/mirrormatch?schema=public
 
       - name: Build application
         run: npm run build
@@ -149,7 +158,7 @@ jobs:
 
   secret-scanning:
     needs: skip-ci-check
-    if: needs.skip-ci-check.outputs.should-skip != '1'
+    if: *should_run
     runs-on: ubuntu-latest
     container:
       image: zricethezav/gitleaks:latest
@@ -169,7 +178,7 @@ jobs:
 
   dependency-scan:
     needs: skip-ci-check
-    if: needs.skip-ci-check.outputs.should-skip != '1'
+    if: *should_run
     runs-on: ubuntu-latest
     container:
       image: aquasec/trivy:latest
@@ -203,7 +212,7 @@ jobs:
 
   sast-scan:
     needs: skip-ci-check
-    if: needs.skip-ci-check.outputs.should-skip != '1'
+    if: *should_run
     runs-on: ubuntu-latest
     container:
       image: ubuntu:22.04

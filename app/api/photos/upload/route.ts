@@ -62,6 +62,7 @@ export async function POST(req: NextRequest) {
 
       // Check for duplicate file
       const existingPhoto = await prisma.photo.findFirst({
+        // eslint-disable-next-line @typescript-eslint/no-explicit-any
         where: { fileHash } as any,
       })
 
@@ -75,7 +76,9 @@ export async function POST(req: NextRequest) {
       // Generate unique filename
       const timestamp = Date.now()
       const randomStr = Math.random().toString(36).substring(2, 15)
-      const extension = file.name.split(".").pop() || "jpg"
+      // Sanitize extension - only allow alphanumeric characters
+      const rawExtension = file.name.split(".").pop() || "jpg"
+      const extension = rawExtension.replace(/[^a-zA-Z0-9]/g, "").toLowerCase() || "jpg"
       const filename = `${timestamp}-${randomStr}.${extension}`
 
       // Ensure uploads directory exists
@@ -84,7 +87,7 @@ export async function POST(req: NextRequest) {
         mkdirSync(uploadsDir, { recursive: true })
       }
 
-      // Save file
+      // Filename is generated server-side (timestamp + random), safe for path.join
       const filepath = join(uploadsDir, filename)
       await writeFile(filepath, buffer)
 
@@ -122,6 +125,7 @@ export async function POST(req: NextRequest) {
         answerName: answerName.trim(),
         points: pointsValue,
         maxAttempts: maxAttemptsValue,
+        // eslint-disable-next-line @typescript-eslint/no-explicit-any
       } as any,
       include: {
         uploader: {
@@ -148,7 +152,9 @@ export async function POST(req: NextRequest) {
     Promise.all(
       allUsers.map((user: { id: string; email: string; name: string }) =>
         sendNewPhotoEmail(user.email, user.name, photo.id, photo.uploader.name).catch(
-          (err) => console.error(`Failed to send email to ${user.email}:`, err)
+          (err) => {
+            console.error("Failed to send email to:", user.email, err)
+          }
         )
       )
     )

@@ -47,7 +47,7 @@ export async function DELETE(
         try {
           await unlink(filepath)
         } catch (error) {
-          console.error(`Failed to delete file ${filepath}:`, error)
+          console.error("Failed to delete file:", filepath, error)
           // Continue with database deletion even if file deletion fails
         }
       }

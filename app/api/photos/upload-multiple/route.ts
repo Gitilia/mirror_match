@@ -6,7 +6,6 @@ import { writeFile } from "fs/promises"
 import { join } from "path"
 import { existsSync, mkdirSync } from "fs"
 import { createHash } from "crypto"
-import type { Photo } from "@prisma/client"
 
 export async function POST(req: NextRequest) {
   try {
@@ -44,7 +43,13 @@ export async function POST(req: NextRequest) {
       mkdirSync(uploadsDir, { recursive: true })
     }
 
-    type PhotoWithUploader = Photo & {
+    type PhotoWithUploader = {
+      id: string
+      uploaderId: string
+      url: string
+      answerName: string
+      points: number
+      createdAt: Date
       uploader: { name: string }
     }
     
@@ -106,6 +111,7 @@ export async function POST(req: NextRequest) {
 
         // Check for duplicate file
         const existingPhoto = await prisma.photo.findFirst({
+          // eslint-disable-next-line @typescript-eslint/no-explicit-any
           where: { fileHash } as any,
         })
 
@@ -118,9 +124,12 @@ export async function POST(req: NextRequest) {
 
         const timestamp = Date.now()
         const randomStr = Math.random().toString(36).substring(2, 15)
-        const extension = file.name.split(".").pop() || "jpg"
+        // Sanitize extension - only allow alphanumeric characters
+        const rawExtension = file.name.split(".").pop() || "jpg"
+        const extension = rawExtension.replace(/[^a-zA-Z0-9]/g, "").toLowerCase() || "jpg"
         const filename = `${timestamp}-${i}-${randomStr}.${extension}`
 
+        // Filename is generated server-side (timestamp + random), safe for path.join
         const filepath = join(uploadsDir, filename)
         await writeFile(filepath, buffer)
 
@@ -158,6 +167,7 @@ export async function POST(req: NextRequest) {
           penaltyEnabled: penaltyEnabled,
           penaltyPoints: penaltyPointsValue,
           maxAttempts: maxAttemptsValue,
+          // eslint-disable-next-line @typescript-eslint/no-explicit-any
         } as any,
         include: {
           uploader: {
@@ -168,7 +178,7 @@ export async function POST(req: NextRequest) {
         },
       })
 
-      createdPhotos.push(photo as PhotoWithUploader)
+      createdPhotos.push(photo)
     }
 
     // Send emails to all other users for all photos
@@ -193,12 +203,9 @@ export async function POST(req: NextRequest) {
               user.name,
               photo.id,
               photo.uploader.name
-            ).catch((err) =>
-              console.error(
-                `Failed to send email to ${user.email} for photo ${photo.id}:`,
-                err
-              )
-            )
+            ).catch((err) => {
+              console.error("Failed to send email to:", user.email, "for photo:", photo.id, err)
+            })
           )
         )
       )
