@@ -4,11 +4,9 @@ import { cookies } from "next/headers"
 
 export async function GET(request: Request) {
   try {
-    const session = await auth()
-    const cookieStore = await cookies()
     const cookieHeader = request.headers.get("cookie") || ""
     
-    // Parse cookies from header
+    // Parse cookies from header first
     const cookieMap: Record<string, string> = {}
     cookieHeader.split(";").forEach(cookie => {
       const [key, value] = cookie.trim().split("=")
@@ -17,9 +15,26 @@ export async function GET(request: Request) {
       }
     })
     
-    const sessionToken = cookieStore.get("__Secure-authjs.session-token")?.value || 
-                         cookieMap["__Secure-authjs.session-token"] || 
-                         "NOT FOUND"
+    // Try to get session token from cookies
+    const sessionTokenFromHeader = cookieMap["__Secure-authjs.session-token"] || "NOT FOUND"
+    
+    // Try to call auth() - this might fail or return null
+    let session = null
+    let authError = null
+    try {
+      session = await auth()
+    } catch (err) {
+      authError = err instanceof Error ? err.message : String(err)
+    }
+    
+    // Try to get cookie from Next.js cookie store
+    let sessionTokenFromStore = "NOT ACCESSIBLE"
+    try {
+      const cookieStore = await cookies()
+      sessionTokenFromStore = cookieStore.get("__Secure-authjs.session-token")?.value || "NOT FOUND"
+    } catch {
+      // Cookie store might not be accessible in all contexts
+    }
     
     return NextResponse.json({
       hasSession: !!session,
@@ -27,11 +42,14 @@ export async function GET(request: Request) {
         user: session.user,
         expires: session.expires,
       } : null,
+      authError,
       cookies: {
-        sessionTokenPresent: !!sessionToken && sessionToken !== "NOT FOUND",
-        sessionTokenPreview: sessionToken !== "NOT FOUND" ? `${sessionToken.substring(0, 20)}...` : "NOT FOUND",
+        sessionTokenInHeader: sessionTokenFromHeader !== "NOT FOUND",
+        sessionTokenInStore: sessionTokenFromStore !== "NOT FOUND" && sessionTokenFromStore !== "NOT ACCESSIBLE",
+        sessionTokenPreview: sessionTokenFromHeader !== "NOT FOUND" ? `${sessionTokenFromHeader.substring(0, 30)}...` : "NOT FOUND",
         allCookieKeys: Object.keys(cookieMap),
         cookieHeaderLength: cookieHeader.length,
+        cookieHeaderPreview: cookieHeader.substring(0, 200),
       },
       env: {
         hasSecret: !!process.env.NEXTAUTH_SECRET,

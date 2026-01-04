@@ -61,6 +61,12 @@ export const { handlers, auth, signIn, signOut } = NextAuth({
         token.role = (user as { role: string }).role
         token.email = user.email
         token.name = user.name
+        console.log("JWT callback: user added to token", { userId: user.id, email: user.email })
+      } else {
+        console.log("JWT callback: no user, token exists", { 
+          hasToken: !!token,
+          tokenKeys: token ? Object.keys(token) : []
+        })
       }
       return token
     },
@@ -112,7 +118,7 @@ export const { handlers, auth, signIn, signOut } = NextAuth({
         httpOnly: true,
         sameSite: "lax",
         path: "/",
-        secure: process.env.NODE_ENV === "production",
+        secure: true, // Always secure in production (HTTPS required)
       },
     },
   },
