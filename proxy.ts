@@ -11,17 +11,25 @@ export async function proxy(request: NextRequest) {
   }
 
   // Get token (works in Edge runtime)
-  // getToken automatically detects the cookie name from NextAuth config
+  // Explicitly specify the cookie name to match NextAuth config
+  const cookieName = "__Secure-authjs.session-token"
   const token = await getToken({ 
     req: request,
-    secret: process.env.NEXTAUTH_SECRET
+    secret: process.env.NEXTAUTH_SECRET,
+    cookieName: cookieName
   })
   
   // Debug logging for production troubleshooting
+  const cookieHeader = request.headers.get("cookie") || ""
+  const hasCookie = cookieHeader.includes(cookieName)
+  
   if (!token) {
     console.log("Middleware: No token found", {
       pathname,
-      cookieHeader: request.headers.get("cookie")?.substring(0, 200),
+      cookieName,
+      hasCookie,
+      cookieHeader: cookieHeader.substring(0, 300),
+      allCookies: cookieHeader.split(";").map(c => c.trim().substring(0, 50)),
       origin: request.headers.get("origin"),
       referer: request.headers.get("referer")
     })
