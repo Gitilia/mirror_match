@@ -10,8 +10,16 @@ export const revalidate = 60 // Revalidate every 60 seconds
 
 export default async function PhotosPage() {
   const session = await auth()
+  
+  console.log("PhotosPage: auth() returned", {
+    hasSession: !!session,
+    sessionType: typeof session,
+    sessionUser: session?.user,
+    sessionKeys: session ? Object.keys(session) : []
+  })
 
   if (!session) {
+    console.log("PhotosPage: No session, redirecting to login")
     redirect("/login")
   }
 

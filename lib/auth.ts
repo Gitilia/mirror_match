@@ -89,7 +89,10 @@ export const { handlers, auth, signIn, signOut } = NextAuth({
           email: token.email,
           hasUser: !!session.user,
           userKeys: session.user ? Object.keys(session.user) : [],
-          userRole: token.role
+          userRole: token.role,
+          sessionUser: session.user,
+          sessionExpires: session.expires,
+          fullSession: JSON.stringify(session, null, 2)
         })
       } else {
         console.warn("Session callback: token missing or invalid", { 
