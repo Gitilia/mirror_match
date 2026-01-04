@@ -11,7 +11,7 @@ export interface ActivityLog {
   path: string
   method: string
   ip?: string
-  details?: Record<string, any>
+  details?: Record<string, unknown>
 }
 
 export function logActivity(
@@ -19,7 +19,7 @@ export function logActivity(
   path: string,
   method: string,
   user?: { id: string; email: string; role: string } | null,
-  details?: Record<string, any>,
+  details?: Record<string, unknown>,
   request?: Request
 ) {
   const timestamp = new Date().toISOString()
