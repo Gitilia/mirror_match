@@ -75,6 +75,13 @@ export const { handlers, auth, signIn, signOut } = NextAuth({
       return token
     },
     async session({ session, token }) {
+      console.log("Session callback: called", {
+        hasToken: !!token,
+        hasSession: !!session,
+        tokenId: token?.id,
+        tokenEmail: token?.email,
+        stackTrace: new Error().stack?.split('\n').slice(1, 4).join('\n')
+      })
       // Always ensure session.user exists when token exists
       if (token && (token.id || token.email)) {
         // Ensure session.user is always an object
@@ -108,7 +115,10 @@ export const { handlers, auth, signIn, signOut } = NextAuth({
           tokenId: token?.id,
           tokenEmail: token?.email
         })
+        // Return null if no valid token - this will cause auth() to return null
+        return null
       }
+      // Explicitly return session to ensure it's returned
       return session
     }
   },
