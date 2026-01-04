@@ -84,10 +84,6 @@ export const { handlers, auth, signIn, signOut } = NextAuth({
       })
       // Always ensure session.user exists when token exists
       if (token && (token.id || token.email)) {
-        // Ensure session.user is always an object
-        if (!session.user) {
-          session.user = {} as any
-        }
         session.user = {
           ...session.user,
           id: token.id as string,
@@ -115,8 +111,7 @@ export const { handlers, auth, signIn, signOut } = NextAuth({
           tokenId: token?.id,
           tokenEmail: token?.email
         })
-        // Return null if no valid token - this will cause auth() to return null
-        return null
+        // Return session even if token is invalid - NextAuth will handle validation
       }
       // Explicitly return session to ensure it's returned
       return session
