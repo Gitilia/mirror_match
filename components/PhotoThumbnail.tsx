@@ -5,10 +5,11 @@ import Image from "next/image"
 export default function PhotoThumbnail({ src, alt }: { src: string; alt: string }) {
   // Handle external URLs and local paths
   const isExternal = src.startsWith("http://") || src.startsWith("https://")
+  const isLocalUpload = src.startsWith("/uploads/")
   
   return (
     <div className="w-full h-full relative">
-      {isExternal ? (
+      {isExternal || isLocalUpload ? (
         /* eslint-disable-next-line @next/next/no-img-element */
         <img
           src={src}
@@ -28,7 +29,6 @@ export default function PhotoThumbnail({ src, alt }: { src: string; alt: string 
           className="object-cover"
           sizes="(max-width: 640px) 100vw, (max-width: 1024px) 50vw, 25vw"
           loading="lazy"
-          unoptimized={src.startsWith("/uploads/")}
         />
       )}
     </div>

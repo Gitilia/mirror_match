@@ -2,10 +2,8 @@
 
 import { useState } from "react"
 import { signIn } from "next-auth/react"
-import { useRouter } from "next/navigation"
 
 export default function LoginPage() {
-  const router = useRouter()
   const [email, setEmail] = useState("")
   const [password, setPassword] = useState("")
   const [error, setError] = useState("")
@@ -23,11 +21,20 @@ export default function LoginPage() {
         redirect: false,
       })
 
+      console.log("Sign in result:", { result, error: result?.error, ok: result?.ok, url: result?.url })
+
       if (result?.error) {
         setError("Invalid email or password")
+      } else if (result?.ok) {
+        // Check if there's a callback URL in the query params
+        const params = new URLSearchParams(window.location.search)
+        const callbackUrl = params.get("callbackUrl") || "/photos"
+        console.log("Redirecting to:", callbackUrl)
+        // Use window.location.href to force a full page reload
+        // This ensures the session cookie is read before middleware checks authentication
+        window.location.href = callbackUrl
       } else {
-        router.push("/photos")
-        router.refresh()
+        setError("Login failed. Please try again.")
       }
     } catch {
       setError("An error occurred. Please try again.")

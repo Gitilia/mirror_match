@@ -9,11 +9,28 @@ import DeletePhotoButton from "@/components/DeletePhotoButton"
 export const revalidate = 60 // Revalidate every 60 seconds
 
 export default async function PhotosPage() {
+  console.log("PhotosPage: Starting, calling auth()...")
   const session = await auth()
+  
+  console.log("PhotosPage: auth() returned", {
+    hasSession: !!session,
+    sessionType: typeof session,
+    sessionUser: session?.user,
+    sessionKeys: session ? Object.keys(session) : [],
+    sessionString: JSON.stringify(session, null, 2)
+  })
 
   if (!session) {
+    console.log("PhotosPage: No session, redirecting to login")
     redirect("/login")
   }
+  
+  if (!session.user) {
+    console.log("PhotosPage: Session exists but no user, redirecting to login")
+    redirect("/login")
+  }
+  
+  console.log("PhotosPage: Session valid, rendering page")
 
   // Limit to 50 photos per page for performance
   const photos = await prisma.photo.findMany({

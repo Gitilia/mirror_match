@@ -6,15 +6,35 @@ export async function proxy(request: NextRequest) {
   const pathname = request.nextUrl.pathname
 
   // Public routes - allow access
-  if (pathname === "/login" || pathname.startsWith("/api/auth")) {
+  if (pathname === "/login" || pathname.startsWith("/api/auth") || pathname.startsWith("/uploads")) {
     return NextResponse.next()
   }
 
   // Get token (works in Edge runtime)
+  // Explicitly specify the cookie name to match NextAuth config
+  const cookieName = "__Secure-authjs.session-token"
   const token = await getToken({ 
     req: request,
-    secret: process.env.NEXTAUTH_SECRET 
+    secret: process.env.NEXTAUTH_SECRET,
+    cookieName: cookieName
   })
+  
+  // User activity logging - track all page visits and API calls
+  const timestamp = new Date().toISOString()
+  const userAgent = request.headers.get("user-agent") || "unknown"
+  const ip = request.headers.get("x-forwarded-for") || 
+             request.headers.get("x-real-ip") || 
+             "unknown"
+  const referer = request.headers.get("referer") || "direct"
+  const method = request.method
+  
+  if (token) {
+    // Log authenticated user activity
+    console.log(`[ACTIVITY] ${timestamp} | ${method} ${pathname} | User: ${token.email} (${token.role}) | IP: ${ip} | Referer: ${referer}`)
+  } else {
+    // Log unauthenticated access attempts
+    console.log(`[ACTIVITY] ${timestamp} | ${method} ${pathname} | User: UNAUTHENTICATED | IP: ${ip} | Referer: ${referer} | UA: ${userAgent.substring(0, 100)}`)
+  }
 
   // Protected routes - require authentication
   if (!token) {
@@ -42,8 +62,9 @@ export const config = {
      * - _next/rsc (RSC payload requests)
      * - _next/webpack (webpack chunks)
      * - favicon.ico (favicon file)
-     * - public folder
+     * - uploads/ (uploaded files)
+     * - public folder files (images, etc.)
      */
-    "/((?!_next/static|_next/image|_next/rsc|_next/webpack|favicon.ico|.*\\.(?:svg|png|jpg|jpeg|gif|webp)$).*)",
+    "/((?!_next/static|_next/image|_next/rsc|_next/webpack|favicon.ico|uploads|.*\\.(?:svg|png|jpg|jpeg|gif|webp)$).*)",
   ],
 }

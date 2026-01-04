@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from "next/server"
 import { auth } from "@/lib/auth"
 import { prisma } from "@/lib/prisma"
 import { sendNewPhotoEmail } from "@/lib/email"
+import { logActivity } from "@/lib/activity-log"
 import { writeFile } from "fs/promises"
 import { join } from "path"
 import { existsSync, mkdirSync } from "fs"
@@ -85,14 +86,26 @@ export async function POST(req: NextRequest) {
       const uploadsDir = join(process.cwd(), "public", "uploads")
       if (!existsSync(uploadsDir)) {
         mkdirSync(uploadsDir, { recursive: true })
+        console.log(`[UPLOAD] Created uploads directory: ${uploadsDir}`)
       }
+      console.log(`[UPLOAD] Using uploads directory: ${uploadsDir} (exists: ${existsSync(uploadsDir)})`)
 
       // Filename is generated server-side (timestamp + random), safe for path.join
       const filepath = join(uploadsDir, filename)
       await writeFile(filepath, buffer)
+      
+      // Verify file was written successfully
+      const { access } = await import("fs/promises")
+      try {
+        await access(filepath)
+        console.log(`[UPLOAD] File saved successfully: ${filepath}`)
+      } catch (error) {
+        console.error(`[UPLOAD] File write verification failed: ${filepath}`, error)
+        throw new Error("Failed to save file to disk")
+      }
 
-      // Set URL to the uploaded file
-      photoUrl = `/uploads/${filename}`
+      // Set URL to the uploaded file - use API route to ensure it's accessible
+      photoUrl = `/api/uploads/${filename}`
     } else {
       // Handle URL upload (fallback)
       const url = formData.get("url") as string | null
@@ -157,6 +170,21 @@ export async function POST(req: NextRequest) {
           }
         )
       )
+    )
+
+    // Log photo upload activity
+    logActivity(
+      "PHOTO_UPLOAD",
+      "/api/photos/upload",
+      "POST",
+      session.user,
+      {
+        photoId: photo.id,
+        answerName: photo.answerName,
+        points: photo.points,
+        filename: photoUrl.split("/").pop()
+      },
+      req
     )
 
     return NextResponse.json({ photo }, { status: 201 })

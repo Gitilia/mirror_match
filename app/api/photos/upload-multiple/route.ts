@@ -133,7 +133,7 @@ export async function POST(req: NextRequest) {
         const filepath = join(uploadsDir, filename)
         await writeFile(filepath, buffer)
 
-        photoUrl = `/uploads/${filename}`
+        photoUrl = `/api/uploads/${filename}`
       } else if (url) {
         // Handle URL upload
         photoUrl = url

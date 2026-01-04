@@ -153,6 +153,26 @@ npm run build
 npm start
 ```
 
+### Deployment Notes
+
+**Important Configuration:**
+- Ensure `NODE_ENV=production` is set in production
+- Set `NEXTAUTH_URL` to your production domain (e.g., `https://yourdomain.com`)
+- Set `AUTH_TRUST_HOST=true` if using reverse proxy
+- Ensure `DATABASE_URL` points to your production database
+- Files are stored in `public/uploads/` directory - ensure this directory persists across deployments
+
+**File Uploads:**
+- Photos are uploaded to `public/uploads/` directory
+- Files are served via `/api/uploads/[filename]` API route
+- Ensure the uploads directory has proper write permissions
+- Files are stored on the filesystem (not in database)
+
+**Monitoring Activity:**
+- User activity is logged to console/systemd logs
+- Watch logs in real-time: `sudo journalctl -u app-backend -f | grep -E "\[ACTIVITY\]|\[PHOTO_UPLOAD\]|\[GUESS_SUBMIT\]"`
+- Activity logs include: page visits, photo uploads, guess submissions
+
 ## Database Commands
 
 - `npm run db:generate` - Generate Prisma Client
@@ -160,6 +180,18 @@ npm start
 - `npm run db:push` - Push schema changes to database (dev only)
 - `npm run db:studio` - Open Prisma Studio (database GUI)
 - `npm run db:seed` - Seed database with initial admin user
+
+### Querying the Database
+
+**Get all photo answers:**
+```bash
+psql "postgresql://user:password@host:5432/database" -c "SELECT \"answerName\" FROM \"Photo\" ORDER BY \"createdAt\" DESC;"
+```
+
+**Get answers with uploader info:**
+```bash
+psql "postgresql://user:password@host:5432/database" -c "SELECT p.\"answerName\", p.url, u.name as uploader, p.\"createdAt\" FROM \"Photo\" p JOIN \"User\" u ON p.\"uploaderId\" = u.id ORDER BY p.\"createdAt\" DESC;"
+```
 
 ## Creating the First Admin User
 
@@ -210,9 +242,12 @@ mirrormatch/
 - View user points and roles
 
 ### Photo Upload (`/upload`)
-- Upload photos via URL
+- Upload photos via file upload or URL
+- Files are stored in `public/uploads/` directory
+- Files are served via `/api/uploads/[filename]` API route
 - Set answer name for guessing
 - Automatically sends email notifications to all other users
+- Duplicate file detection (SHA256 hash)
 
 ### Photo Guessing (`/photos/[id]`)
 - View photo and uploader info
@@ -269,7 +304,20 @@ Set up SMTP credentials in `.env`:
 ### Authentication Issues
 - Verify `NEXTAUTH_SECRET` is set
 - Check `NEXTAUTH_URL` matches your app URL
+- Set `AUTH_TRUST_HOST=true` if using reverse proxy
 - Clear browser cookies if needed
+- Check middleware logs: `sudo journalctl -u app-backend | grep "Middleware"`
+
+### Photo Upload Issues
+- Verify `public/uploads/` directory exists and has write permissions
+- Check file upload logs: `sudo journalctl -u app-backend | grep "UPLOAD"`
+- Ensure files are being saved: check `public/uploads/` directory
+- Files are served via `/api/uploads/[filename]` - verify API route is accessible
+
+### Build Issues
+- If build fails with `DATABASE_URL not set`, this is expected - Prisma initialization is lazy
+- Ensure all environment variables are set in production
+- Check for TypeScript errors: `npm run type-check`
 
 ## Documentation
 
