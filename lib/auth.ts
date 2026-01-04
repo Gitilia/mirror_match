@@ -10,6 +10,7 @@ if (!nextAuthSecret) {
 
 export const { handlers, auth, signIn, signOut } = NextAuth({
   trustHost: true,
+  debug: process.env.NODE_ENV !== "production",
   providers: [
     Credentials({
       name: "Credentials",
@@ -66,6 +67,10 @@ export const { handlers, auth, signIn, signOut } = NextAuth({
     async session({ session, token }) {
       // Always ensure session.user exists when token exists
       if (token && (token.id || token.email)) {
+        // Ensure session.user is always an object
+        if (!session.user) {
+          session.user = {} as any
+        }
         session.user = {
           ...session.user,
           id: token.id as string,
@@ -73,8 +78,22 @@ export const { handlers, auth, signIn, signOut } = NextAuth({
           name: (token.name as string) || session.user?.name || "",
           role: token.role as string,
         }
-      } else if (process.env.NODE_ENV !== "production") {
-        console.warn("Session callback: token missing or invalid", { token, session })
+        if (process.env.NODE_ENV !== "production") {
+          console.log("Session callback: session created", { 
+            userId: token.id, 
+            email: token.email,
+            hasUser: !!session.user,
+            userKeys: session.user ? Object.keys(session.user) : []
+          })
+        }
+      } else {
+        console.warn("Session callback: token missing or invalid", { 
+          hasToken: !!token,
+          tokenKeys: token ? Object.keys(token) : [],
+          hasSession: !!session,
+          sessionKeys: session ? Object.keys(session) : [],
+          sessionUser: session?.user
+        })
       }
       return session
     }
@@ -84,6 +103,18 @@ export const { handlers, auth, signIn, signOut } = NextAuth({
   },
   session: {
     strategy: "jwt",
+    maxAge: 30 * 24 * 60 * 60, // 30 days
+  },
+  cookies: {
+    sessionToken: {
+      name: `__Secure-authjs.session-token`,
+      options: {
+        httpOnly: true,
+        sameSite: "lax",
+        path: "/",
+        secure: process.env.NODE_ENV === "production",
+      },
+    },
   },
   secret: nextAuthSecret,
 })

@@ -23,11 +23,19 @@ export default function LoginPage() {
         redirect: false,
       })
 
+      console.log("Sign in result:", { result, error: result?.error, ok: result?.ok, url: result?.url })
+
       if (result?.error) {
         setError("Invalid email or password")
-      } else {
-        router.push("/photos")
+      } else if (result?.ok) {
+        // Check if there's a callback URL in the query params
+        const params = new URLSearchParams(window.location.search)
+        const callbackUrl = params.get("callbackUrl") || "/photos"
+        console.log("Redirecting to:", callbackUrl)
+        router.push(callbackUrl)
         router.refresh()
+      } else {
+        setError("Login failed. Please try again.")
       }
     } catch {
       setError("An error occurred. Please try again.")
