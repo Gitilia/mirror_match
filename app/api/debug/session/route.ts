@@ -22,9 +22,16 @@ export async function GET(request: Request) {
     let session = null
     let authError = null
     try {
+      console.log("Debug endpoint: Calling auth()...")
       session = await auth()
+      console.log("Debug endpoint: auth() returned", {
+        hasSession: !!session,
+        sessionUser: session?.user,
+        sessionKeys: session ? Object.keys(session) : []
+      })
     } catch (err) {
       authError = err instanceof Error ? err.message : String(err)
+      console.error("Debug endpoint: auth() error", authError)
     }
     
     // Try to get cookie from Next.js cookie store
