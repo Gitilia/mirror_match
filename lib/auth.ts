@@ -84,21 +84,22 @@ export const { handlers, auth, signIn, signOut } = NextAuth({
           name: (token.name as string) || session.user?.name || "",
           role: token.role as string,
         }
-        if (process.env.NODE_ENV !== "production") {
-          console.log("Session callback: session created", { 
-            userId: token.id, 
-            email: token.email,
-            hasUser: !!session.user,
-            userKeys: session.user ? Object.keys(session.user) : []
-          })
-        }
+        console.log("Session callback: session created", { 
+          userId: token.id, 
+          email: token.email,
+          hasUser: !!session.user,
+          userKeys: session.user ? Object.keys(session.user) : [],
+          userRole: token.role
+        })
       } else {
         console.warn("Session callback: token missing or invalid", { 
           hasToken: !!token,
           tokenKeys: token ? Object.keys(token) : [],
           hasSession: !!session,
           sessionKeys: session ? Object.keys(session) : [],
-          sessionUser: session?.user
+          sessionUser: session?.user,
+          tokenId: token?.id,
+          tokenEmail: token?.email
         })
       }
       return session
