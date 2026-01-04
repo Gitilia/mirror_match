@@ -2,10 +2,8 @@
 
 import { useState } from "react"
 import { signIn } from "next-auth/react"
-import { useRouter } from "next/navigation"
 
 export default function LoginPage() {
-  const router = useRouter()
   const [email, setEmail] = useState("")
   const [password, setPassword] = useState("")
   const [error, setError] = useState("")
@@ -32,8 +30,9 @@ export default function LoginPage() {
         const params = new URLSearchParams(window.location.search)
         const callbackUrl = params.get("callbackUrl") || "/photos"
         console.log("Redirecting to:", callbackUrl)
-        router.push(callbackUrl)
-        router.refresh()
+        // Use window.location.href to force a full page reload
+        // This ensures the session cookie is read before middleware checks authentication
+        window.location.href = callbackUrl
       } else {
         setError("Login failed. Please try again.")
       }
