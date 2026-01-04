@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from "next/server"
 import { auth } from "@/lib/auth"
 import { prisma } from "@/lib/prisma"
 import { normalizeString } from "@/lib/utils"
+import { logActivity } from "@/lib/activity-log"
 
 export async function POST(
   req: NextRequest,
@@ -128,6 +129,21 @@ export async function POST(
         })
       }
     }
+
+    // Log guess activity
+    logActivity(
+      "GUESS_SUBMIT",
+      `/api/photos/${photoId}/guess`,
+      "POST",
+      session.user,
+      {
+        photoId,
+        guessText: guess.guessText.substring(0, 50), // Truncate for privacy
+        correct: isCorrect,
+        pointsChange
+      },
+      req
+    )
 
     return NextResponse.json({ 
       guess, 

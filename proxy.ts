@@ -19,27 +19,21 @@ export async function proxy(request: NextRequest) {
     cookieName: cookieName
   })
   
-  // Debug logging for production troubleshooting
-  const cookieHeader = request.headers.get("cookie") || ""
-  const hasCookie = cookieHeader.includes(cookieName)
+  // User activity logging - track all page visits and API calls
+  const timestamp = new Date().toISOString()
+  const userAgent = request.headers.get("user-agent") || "unknown"
+  const ip = request.headers.get("x-forwarded-for") || 
+             request.headers.get("x-real-ip") || 
+             "unknown"
+  const referer = request.headers.get("referer") || "direct"
+  const method = request.method
   
-  if (!token) {
-    console.log("Middleware: No token found", {
-      pathname,
-      cookieName,
-      hasCookie,
-      cookieHeader: cookieHeader.substring(0, 300),
-      allCookies: cookieHeader.split(";").map(c => c.trim().substring(0, 50)),
-      origin: request.headers.get("origin"),
-      referer: request.headers.get("referer")
-    })
+  if (token) {
+    // Log authenticated user activity
+    console.log(`[ACTIVITY] ${timestamp} | ${method} ${pathname} | User: ${token.email} (${token.role}) | IP: ${ip} | Referer: ${referer}`)
   } else {
-    console.log("Middleware: Token found", {
-      pathname,
-      tokenId: token.id,
-      tokenRole: token.role,
-      tokenEmail: token.email
-    })
+    // Log unauthenticated access attempts
+    console.log(`[ACTIVITY] ${timestamp} | ${method} ${pathname} | User: UNAUTHENTICATED | IP: ${ip} | Referer: ${referer} | UA: ${userAgent.substring(0, 100)}`)
   }
 
   // Protected routes - require authentication
