@@ -2,7 +2,7 @@ import { NextResponse } from "next/server"
 import type { NextRequest } from "next/server"
 import { getToken } from "next-auth/jwt"
 
-export async function proxy(request: NextRequest) {
+export async function middleware(request: NextRequest) {
   const pathname = request.nextUrl.pathname
 
   // Public routes - allow access
@@ -17,14 +17,20 @@ export async function proxy(request: NextRequest) {
     secret: process.env.NEXTAUTH_SECRET
   })
   
-  // Debug logging (remove in production if not needed)
-  if (process.env.NODE_ENV !== "production") {
-    console.log("Middleware token check:", {
+  // Debug logging for production troubleshooting
+  if (!token) {
+    console.log("Middleware: No token found", {
       pathname,
-      hasToken: !!token,
-      tokenId: token?.id,
-      tokenRole: token?.role,
-      cookieHeader: request.headers.get("cookie")?.substring(0, 100)
+      cookieHeader: request.headers.get("cookie")?.substring(0, 200),
+      origin: request.headers.get("origin"),
+      referer: request.headers.get("referer")
+    })
+  } else {
+    console.log("Middleware: Token found", {
+      pathname,
+      tokenId: token.id,
+      tokenRole: token.role,
+      tokenEmail: token.email
     })
   }
 
