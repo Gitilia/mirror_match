@@ -65,7 +65,11 @@ export const { handlers, auth, signIn, signOut } = NextAuth({
       } else {
         console.log("JWT callback: no user, token exists", { 
           hasToken: !!token,
-          tokenKeys: token ? Object.keys(token) : []
+          tokenKeys: token ? Object.keys(token) : [],
+          tokenId: token?.id,
+          tokenEmail: token?.email,
+          tokenName: token?.name,
+          tokenRole: token?.role
         })
       }
       return token
