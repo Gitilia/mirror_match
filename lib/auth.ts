@@ -58,13 +58,23 @@ export const { handlers, auth, signIn, signOut } = NextAuth({
       if (user) {
         token.id = user.id
         token.role = (user as { role: string }).role
+        token.email = user.email
+        token.name = user.name
       }
       return token
     },
     async session({ session, token }) {
-      if (session.user) {
-        session.user.id = token.id as string
-        session.user.role = token.role as string
+      // Always ensure session.user exists when token exists
+      if (token && (token.id || token.email)) {
+        session.user = {
+          ...session.user,
+          id: token.id as string,
+          email: (token.email as string) || session.user?.email || "",
+          name: (token.name as string) || session.user?.name || "",
+          role: token.role as string,
+        }
+      } else if (process.env.NODE_ENV !== "production") {
+        console.warn("Session callback: token missing or invalid", { token, session })
       }
       return session
     }
