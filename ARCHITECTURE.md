@@ -26,16 +26,19 @@ mirrormatch/
 │   ├── Navigation.tsx   # Navigation bar (client component)
 │   └── [others]         # Form components, UI components
 ├── lib/                   # Utility libraries and helpers
-│   ├── prisma.ts        # Prisma client singleton
+│   ├── prisma.ts        # Prisma client singleton (lazy initialization)
 │   ├── auth.ts          # NextAuth configuration
 │   ├── email.ts         # Email sending utilities
-│   └── utils.ts         # Helper functions (hashing, etc.)
+│   ├── utils.ts         # Helper functions (hashing, etc.)
+│   └── activity-log.ts  # Activity logging utility
 ├── prisma/                # Database schema and migrations
 │   ├── schema.prisma     # Prisma schema definition
 │   └── seed.ts          # Database seeding script
 ├── types/                 # TypeScript type definitions
 │   └── next-auth.d.ts   # NextAuth type extensions
-└── middleware.ts         # Next.js middleware for route protection
+├── proxy.ts              # Next.js proxy/middleware for route protection (Next.js 16)
+└── lib/
+    └── activity-log.ts  # Activity logging utility
 ```
 
 ## Data Model
@@ -153,21 +156,31 @@ model Guess {
 
 ### Route Protection
 
-**Location:** `middleware.ts`
+**Location:** `proxy.ts` (Next.js 16 uses `proxy.ts` instead of `middleware.ts`)
 
 **Public Routes:**
 - `/login`
 - `/api/auth/*` (NextAuth endpoints)
+- `/uploads/*` (uploaded files - legacy, now served via API)
+- `/api/uploads/*` (uploaded files served via API route)
 
 **Protected Routes:**
 - All other routes require authentication
 - `/admin/*` routes additionally require `role === "ADMIN"`
 
 **Implementation:**
-- Uses NextAuth `withAuth` middleware
-- Checks JWT token on each request
-- Redirects unauthenticated users to `/login`
+- Uses NextAuth `getToken` from `next-auth/jwt` in Edge runtime
+- Checks JWT token on each request via `proxy.ts`
+- Explicitly specifies cookie name: `__Secure-authjs.session-token`
+- Redirects unauthenticated users to `/login` with `callbackUrl`
 - Redirects non-admin users trying to access admin routes to home
+- Logs all user activity (page visits, API calls)
+
+**Activity Logging:**
+- All authenticated requests are logged with user info, IP, path, method
+- Unauthenticated access attempts are also logged
+- Photo uploads and guess submissions have dedicated activity logs
+- Logs format: `[ACTIVITY] timestamp | method path | User: email (role) | IP: ip`
 
 ## Application Flows
 
@@ -219,16 +232,37 @@ model Guess {
 
 **Flow:**
 1. User navigates to `/upload`
-2. Enters photo URL and answer name
-3. Form submits to `POST /api/photos`
+2. Uploads photo file or enters photo URL and answer name
+3. Form submits to `POST /api/photos/upload` (file upload) or `POST /api/photos` (URL)
 4. API route:
    - Verifies session
-   - Creates Photo record with `uploaderId`, `url`, `answerName`
+   - For file uploads:
+     - Validates file type and size (max 10MB)
+     - Calculates SHA256 hash for duplicate detection
+     - Generates unique filename: `timestamp-randomstring.extension`
+     - Saves file to `public/uploads/` directory
+     - Sets photo URL to `/api/uploads/[filename]`
+   - For URL uploads:
+     - Validates URL format
+     - Checks for duplicate URLs
+     - Uses provided URL directly
+   - Creates Photo record with `uploaderId`, `url`, `answerName`, `fileHash`
    - Queries all other users (excluding uploader)
    - Sends email notifications to all other users (async, non-blocking)
+   - Logs activity: `[PHOTO_UPLOAD]`
 5. User redirected to photo detail page
 
-**API Route:** `app/api/photos/route.ts`
+**API Routes:**
+- `app/api/photos/upload/route.ts` - File upload endpoint
+- `app/api/photos/route.ts` - URL upload endpoint (legacy)
+- `app/api/uploads/[filename]/route.ts` - Serves uploaded files
+
+**File Storage:**
+- Files stored in `public/uploads/` directory
+- Served via `/api/uploads/[filename]` API route
+- Files verified after write to ensure successful save
+- Duplicate detection via SHA256 hash
+
 **Email:** `lib/email.ts` - `sendNewPhotoEmail()`
 **Page:** `app/upload/page.tsx` (client component)
 
@@ -260,10 +294,13 @@ model Guess {
 4. API route:
    - Verifies session
    - Checks if user already has correct guess (prevent duplicate points)
+   - Prevents users from guessing their own photos
    - Normalizes guess text and answer (trim, lowercase)
    - Compares normalized strings
    - Creates Guess record with `correct` boolean
-   - If correct: increments user's points by 1
+   - If correct: increments user's points by photo's `points` value
+   - If wrong and penalty enabled: deducts penalty points
+   - Logs activity: `[GUESS_SUBMIT]` with result
 5. Page refreshes to show feedback
 
 **API Route:** `app/api/photos/[photoId]/guess/route.ts`
@@ -274,6 +311,7 @@ model Guess {
 - Case-insensitive comparison
 - Trims whitespace
 - Exact match required (no fuzzy matching)
+- Points awarded based on photo's `points` field (default: 1)
 
 ### 7. Leaderboard
 
