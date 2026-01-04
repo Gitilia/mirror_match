@@ -5,8 +5,9 @@ import Image from "next/image"
 export default function PhotoImage({ src, alt }: { src: string; alt: string }) {
   // Handle external URLs and local paths
   const isExternal = src.startsWith("http://") || src.startsWith("https://")
+  const isLocalUpload = src.startsWith("/uploads/")
   
-  if (isExternal) {
+  if (isExternal || isLocalUpload) {
     return (
       /* eslint-disable-next-line @next/next/no-img-element */
       <img
@@ -31,7 +32,6 @@ export default function PhotoImage({ src, alt }: { src: string; alt: string }) {
       className="object-contain"
       sizes="(max-width: 768px) 100vw, (max-width: 1200px) 50vw, 600px"
       loading="lazy"
-      unoptimized={src.startsWith("/uploads/")}
     />
   )
 }

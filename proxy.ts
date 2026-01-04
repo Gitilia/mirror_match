@@ -6,7 +6,7 @@ export async function proxy(request: NextRequest) {
   const pathname = request.nextUrl.pathname
 
   // Public routes - allow access
-  if (pathname === "/login" || pathname.startsWith("/api/auth")) {
+  if (pathname === "/login" || pathname.startsWith("/api/auth") || pathname.startsWith("/uploads")) {
     return NextResponse.next()
   }
 
@@ -68,8 +68,9 @@ export const config = {
      * - _next/rsc (RSC payload requests)
      * - _next/webpack (webpack chunks)
      * - favicon.ico (favicon file)
-     * - public folder
+     * - uploads/ (uploaded files)
+     * - public folder files (images, etc.)
      */
-    "/((?!_next/static|_next/image|_next/rsc|_next/webpack|favicon.ico|.*\\.(?:svg|png|jpg|jpeg|gif|webp)$).*)",
+    "/((?!_next/static|_next/image|_next/rsc|_next/webpack|favicon.ico|uploads|.*\\.(?:svg|png|jpg|jpeg|gif|webp)$).*)",
   ],
 }
