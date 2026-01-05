@@ -3,16 +3,41 @@ import Credentials from "next-auth/providers/credentials"
 import { prisma } from "./prisma"
 import bcrypt from "bcryptjs"
 import { logger } from "./logger"
-import { SESSION_COOKIE_NAME } from "./constants"
 
 const nextAuthSecret = process.env.NEXTAUTH_SECRET
 if (!nextAuthSecret) {
   throw new Error("NEXTAUTH_SECRET is not set. Define it to enable authentication.")
 }
 
+// Determine if we should use secure cookies based on AUTH_URL/NEXTAUTH_URL
+// Auth.js v5 derives this from the origin it detects, so we need to be explicit
+const authUrl = process.env.AUTH_URL || process.env.NEXTAUTH_URL || "http://localhost:3000"
+const isDev = process.env.NODE_ENV === "development"
+const isHttp = authUrl.startsWith("http://")
+
+// Explicitly control useSecureCookies - only true when URL is https://
+// This prevents Auth.js from auto-detecting HTTPS and adding prefixes on HTTP
+const useSecureCookies = !isHttp
+
+// Log cookie configuration for debugging (only in development)
+if (isDev) {
+  logger.debug("NextAuth cookie configuration", {
+    authUrl,
+    isDev,
+    isHttp,
+    useSecureCookies,
+    nodeEnv: process.env.NODE_ENV,
+    hasVercelEnv: !!process.env.VERCEL,
+    hasAuthTrustHost: !!process.env.AUTH_TRUST_HOST,
+  })
+}
+
 export const { handlers, auth, signIn, signOut } = NextAuth({
+  // trustHost must be true for NextAuth v5 to work, even on localhost
+  // We control HTTPS detection via cookie configuration instead
   trustHost: true,
   debug: process.env.NODE_ENV !== "production",
+  basePath: "/api/auth",
   providers: [
     Credentials({
       name: "Credentials",
@@ -115,16 +140,39 @@ export const { handlers, auth, signIn, signOut } = NextAuth({
     strategy: "jwt",
     maxAge: 30 * 24 * 60 * 60, // 30 days
   },
-  cookies: {
-    sessionToken: {
-      name: SESSION_COOKIE_NAME,
-      options: {
-        httpOnly: true,
-        sameSite: "lax",
-        path: "/",
-        secure: true, // Always secure in production (HTTPS required)
-      },
-    },
-  },
+  // Explicitly configure cookies for HTTP (localhost)
+  // For HTTPS, let Auth.js defaults handle it (prefixes + Secure)
+  cookies: isHttp
+    ? {
+        // localhost / pure HTTP: no prefixes, no Secure
+        sessionToken: {
+          name: "authjs.session-token",
+          options: {
+            httpOnly: true,
+            sameSite: "lax",
+            path: "/",
+            secure: false,
+          },
+        },
+        csrfToken: {
+          name: "authjs.csrf-token",
+          options: {
+            httpOnly: true,
+            sameSite: "lax",
+            path: "/",
+            secure: false,
+          },
+        },
+        callbackUrl: {
+          name: "authjs.callback-url",
+          options: {
+            httpOnly: true,
+            sameSite: "lax",
+            path: "/",
+            secure: false,
+          },
+        },
+      }
+    : undefined, // Let Auth.js defaults handle HTTPS envs (prefixes + Secure)
   secret: nextAuthSecret,
 })
