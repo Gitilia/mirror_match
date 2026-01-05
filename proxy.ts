@@ -1,7 +1,6 @@
 import { NextResponse } from "next/server"
 import type { NextRequest } from "next/server"
 import { getToken } from "next-auth/jwt"
-import { SESSION_COOKIE_NAME } from "./lib/constants"
 import { logActivity } from "./lib/activity-log"
 
 export async function proxy(request: NextRequest) {
@@ -13,11 +12,13 @@ export async function proxy(request: NextRequest) {
   }
 
   // Get token (works in Edge runtime)
-  // Use constant for cookie name to match NextAuth config
+  // For HTTPS, NextAuth adds __Secure- prefix automatically
+  // Don't specify cookieName - let getToken auto-detect the correct cookie name
+  // It will automatically look for both prefixed and non-prefixed versions
   const token = await getToken({ 
     req: request,
     secret: process.env.NEXTAUTH_SECRET,
-    cookieName: SESSION_COOKIE_NAME
+    // Don't specify cookieName - getToken will auto-detect __Secure- prefix for HTTPS
   })
   
   // User activity logging - track all page visits and API calls

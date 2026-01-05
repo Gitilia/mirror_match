@@ -4,9 +4,20 @@ import { prisma } from "./prisma"
 import bcrypt from "bcryptjs"
 import { logger } from "./logger"
 
-const nextAuthSecret = process.env.NEXTAUTH_SECRET
-if (!nextAuthSecret) {
-  throw new Error("NEXTAUTH_SECRET is not set. Define it to enable authentication.")
+// Lazy check for NEXTAUTH_SECRET - only validate when actually needed
+// This prevents build-time errors when the secret isn't available
+function getNextAuthSecret(): string {
+  const secret = process.env.NEXTAUTH_SECRET
+  if (!secret) {
+    // Only throw in non-build contexts (runtime)
+    // During build, Next.js might not have env vars available
+    if (process.env.NEXT_PHASE !== "phase-production-build") {
+      throw new Error("NEXTAUTH_SECRET is not set. Define it to enable authentication.")
+    }
+    // Return a placeholder during build - will fail at runtime if not set
+    return "build-time-placeholder"
+  }
+  return secret
 }
 
 // Determine if we should use secure cookies based on AUTH_URL/NEXTAUTH_URL
@@ -155,5 +166,5 @@ export const { handlers, auth, signIn, signOut } = NextAuth({
         },
       }
     : undefined, // Let Auth.js defaults handle HTTPS envs (prefixes + Secure)
-  secret: nextAuthSecret,
+  secret: getNextAuthSecret(),
 })
