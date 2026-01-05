@@ -127,7 +127,7 @@ export default function HelpModal() {
                 </li>
                 <li>
                   <strong>Earn Points:</strong> Get points for each correct guess! The more you
-                  guess correctly, the higher you'll climb on the leaderboard.
+                  guess correctly, the higher you&apos;ll climb on the leaderboard.
                 </li>
                 <li>
                   <strong>Compete:</strong> Check the Leaderboard to see how you rank against other
@@ -252,16 +252,16 @@ export default function HelpModal() {
               <ul className="space-y-2 text-gray-700">
                 <li className="flex items-start">
                   <span className="text-purple-600 mr-2">💡</span>
-                  <span>Guesses are case-insensitive, so don't worry about capitalization</span>
+                  <span>Guesses are case-insensitive, so don&apos;t worry about capitalization</span>
                 </li>
                 <li className="flex items-start">
                   <span className="text-purple-600 mr-2">💡</span>
-                  <span>You can't guess your own photos, but you can still view them</span>
+                  <span>You can&apos;t guess your own photos, but you can still view them</span>
                 </li>
                 <li className="flex items-start">
                   <span className="text-purple-600 mr-2">💡</span>
                   <span>
-                    You'll receive email notifications when other users upload new photos
+                    You&apos;ll receive email notifications when other users upload new photos
                   </span>
                 </li>
                 <li className="flex items-start">
