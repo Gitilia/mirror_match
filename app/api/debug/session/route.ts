@@ -4,6 +4,9 @@ import { cookies } from "next/headers"
 import { SESSION_COOKIE_NAME } from "@/lib/constants"
 import { logger } from "@/lib/logger"
 
+// Mark this route as dynamic to prevent build-time data collection
+export const dynamic = "force-dynamic"
+
 /**
  * Debug endpoint for session inspection
  * ADMIN ONLY - Protected endpoint for debugging session issues

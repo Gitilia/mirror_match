@@ -5,6 +5,9 @@ import { logger } from "@/lib/logger"
 import bcrypt from "bcryptjs"
 import { hashPassword } from "@/lib/utils"
 
+// Mark this route as dynamic to prevent build-time data collection
+export const dynamic = "force-dynamic"
+
 export async function POST(req: NextRequest) {
   try {
     const session = await auth()

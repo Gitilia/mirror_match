@@ -9,6 +9,9 @@ import { join } from "path"
 import { existsSync, mkdirSync } from "fs"
 import { createHash } from "crypto"
 
+// Mark this route as dynamic to prevent build-time data collection
+export const dynamic = "force-dynamic"
+
 export async function POST(req: NextRequest) {
   try {
     const session = await auth()

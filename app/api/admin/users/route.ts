@@ -4,6 +4,9 @@ import { prisma } from "@/lib/prisma"
 import { hashPassword } from "@/lib/utils"
 import { logger } from "@/lib/logger"
 
+// Mark this route as dynamic to prevent build-time data collection
+export const dynamic = "force-dynamic"
+
 export async function POST(req: NextRequest) {
   try {
     const session = await auth()
