@@ -32,6 +32,18 @@ tail -f /tmp/mirrormatch-server.log
 ### Development Mode
 Logs appear directly in the terminal (foreground mode)
 
+### Watching Activity Logs
+```bash
+# If using rebuild.sh (production mode)
+./watch-activity.sh /tmp/mirrormatch-server.log
+
+# If using systemd service
+./watch-activity.sh
+
+# Or specify custom log file
+./watch-activity.sh /path/to/your/logfile.log
+```
+
 ## Manual Commands
 
 If you prefer to run commands manually:

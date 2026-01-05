@@ -6,11 +6,16 @@
 
 set -e
 
+# Get the directory where this script is located
+SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
+cd "$SCRIPT_DIR"
+
 MODE=${1:-prod}
 
 echo "========================================="
 echo "MirrorMatch - Clean Rebuild & Start"
 echo "Mode: ${MODE}"
+echo "Working directory: $SCRIPT_DIR"
 echo "========================================="
 
 # Step 1: Kill everything
@@ -33,7 +38,6 @@ echo "✓ Ports freed"
 # Step 3: Clean build artifacts
 echo ""
 echo "Step 3: Cleaning build artifacts..."
-cd /home/beast/Code/mirrormatch
 rm -rf .next node_modules/.cache .next/cache .next/dev/lock 2>/dev/null || true
 echo "✓ Build artifacts cleaned"
 
@@ -59,19 +63,21 @@ if [ "$MODE" = "dev" ]; then
   unset AUTH_TRUST_HOST
   npm run dev
 else
+  LOG_FILE="${LOG_FILE:-/tmp/mirrormatch-server.log}"
   echo "Production mode - server running in background"
-  echo "View logs: tail -f /tmp/mirrormatch-server.log"
+  echo "View logs: tail -f $LOG_FILE"
   echo "========================================="
   echo ""
   export NODE_ENV=production
   unset AUTH_TRUST_HOST
-  npm run start > /tmp/mirrormatch-server.log 2>&1 &
+  npm run start > "$LOG_FILE" 2>&1 &
   echo "Server PID: $!"
+  echo "Log file: $LOG_FILE"
   echo ""
   sleep 3
   if curl -s -o /dev/null -w "%{http_code}" http://localhost:3000 | grep -q "200\|307"; then
     echo "✓ Server is running on http://localhost:3000"
   else
-    echo "⚠ Server may still be starting. Check logs: tail -f /tmp/mirrormatch-server.log"
+    echo "⚠ Server may still be starting. Check logs: tail -f $LOG_FILE"
   fi
 fi
