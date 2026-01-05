@@ -5,6 +5,9 @@ import { normalizeString } from "@/lib/utils"
 import { logActivity } from "@/lib/activity-log"
 import { logger } from "@/lib/logger"
 
+// Mark this route as dynamic to prevent build-time data collection
+export const dynamic = "force-dynamic"
+
 export async function POST(
   req: NextRequest,
   { params }: { params: Promise<{ photoId: string }> }

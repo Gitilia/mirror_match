@@ -6,6 +6,9 @@ import { unlink } from "fs/promises"
 import { join } from "path"
 import { existsSync } from "fs"
 
+// Mark this route as dynamic to prevent build-time data collection
+export const dynamic = "force-dynamic"
+
 export async function DELETE(
   req: NextRequest,
   { params }: { params: Promise<{ photoId: string }> }
