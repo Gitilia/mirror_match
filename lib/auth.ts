@@ -2,6 +2,8 @@ import NextAuth from "next-auth"
 import Credentials from "next-auth/providers/credentials"
 import { prisma } from "./prisma"
 import bcrypt from "bcryptjs"
+import { logger } from "./logger"
+import { SESSION_COOKIE_NAME } from "./constants"
 
 const nextAuthSecret = process.env.NEXTAUTH_SECRET
 if (!nextAuthSecret) {
@@ -48,7 +50,7 @@ export const { handlers, auth, signIn, signOut } = NextAuth({
             role: user.role,
           }
         } catch (err) {
-          console.error("Auth authorize error:", err)
+          logger.error("Auth authorize error", err instanceof Error ? err : new Error(String(err)))
           return null
         }
       }
@@ -61,27 +63,22 @@ export const { handlers, auth, signIn, signOut } = NextAuth({
         token.role = (user as { role: string }).role
         token.email = user.email
         token.name = user.name
-        console.log("JWT callback: user added to token", { userId: user.id, email: user.email })
+        // DEBUG level: only logs in development or when LOG_LEVEL=DEBUG
+        logger.debug("JWT callback: user added to token", { 
+          userId: user.id, 
+          email: user.email 
+        })
       } else {
-        console.log("JWT callback: no user, token exists", { 
+        // DEBUG level: token refresh (normal operation, only log in debug mode)
+        logger.debug("JWT callback: token refresh", { 
           hasToken: !!token,
-          tokenKeys: token ? Object.keys(token) : [],
           tokenId: token?.id,
           tokenEmail: token?.email,
-          tokenName: token?.name,
-          tokenRole: token?.role
         })
       }
       return token
     },
     async session({ session, token }) {
-      console.log("Session callback: called", {
-        hasToken: !!token,
-        hasSession: !!session,
-        tokenId: token?.id,
-        tokenEmail: token?.email,
-        stackTrace: new Error().stack?.split('\n').slice(1, 4).join('\n')
-      })
       // Always ensure session.user exists when token exists
       if (token && (token.id || token.email)) {
         session.user = {
@@ -91,23 +88,17 @@ export const { handlers, auth, signIn, signOut } = NextAuth({
           name: (token.name as string) || session.user?.name || "",
           role: token.role as string,
         }
-        console.log("Session callback: session created", { 
+        // DEBUG level: session creation is normal operation, only log in debug mode
+        logger.debug("Session callback: session created", { 
           userId: token.id, 
           email: token.email,
-          hasUser: !!session.user,
-          userKeys: session.user ? Object.keys(session.user) : [],
           userRole: token.role,
-          sessionUser: session.user,
-          sessionExpires: session.expires,
-          fullSession: JSON.stringify(session, null, 2)
         })
       } else {
-        console.warn("Session callback: token missing or invalid", { 
+        // WARN level: token missing/invalid is a warning condition
+        logger.warn("Session callback: token missing or invalid", { 
           hasToken: !!token,
-          tokenKeys: token ? Object.keys(token) : [],
           hasSession: !!session,
-          sessionKeys: session ? Object.keys(session) : [],
-          sessionUser: session?.user,
           tokenId: token?.id,
           tokenEmail: token?.email
         })
@@ -126,7 +117,7 @@ export const { handlers, auth, signIn, signOut } = NextAuth({
   },
   cookies: {
     sessionToken: {
-      name: `__Secure-authjs.session-token`,
+      name: SESSION_COOKIE_NAME,
       options: {
         httpOnly: true,
         sameSite: "lax",

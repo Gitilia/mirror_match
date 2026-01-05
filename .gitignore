@@ -50,3 +50,6 @@ next-env.d.ts
 # Test coverage
 /coverage
 /.nyc_output
+
+# Application logs
+*.log

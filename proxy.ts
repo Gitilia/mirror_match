@@ -1,6 +1,8 @@
 import { NextResponse } from "next/server"
 import type { NextRequest } from "next/server"
 import { getToken } from "next-auth/jwt"
+import { SESSION_COOKIE_NAME } from "./lib/constants"
+import { logActivity } from "./lib/activity-log"
 
 export async function proxy(request: NextRequest) {
   const pathname = request.nextUrl.pathname
@@ -11,30 +13,35 @@ export async function proxy(request: NextRequest) {
   }
 
   // Get token (works in Edge runtime)
-  // Explicitly specify the cookie name to match NextAuth config
-  const cookieName = "__Secure-authjs.session-token"
+  // Use constant for cookie name to match NextAuth config
   const token = await getToken({ 
     req: request,
     secret: process.env.NEXTAUTH_SECRET,
-    cookieName: cookieName
+    cookieName: SESSION_COOKIE_NAME
   })
   
   // User activity logging - track all page visits and API calls
-  const timestamp = new Date().toISOString()
-  const userAgent = request.headers.get("user-agent") || "unknown"
-  const ip = request.headers.get("x-forwarded-for") || 
-             request.headers.get("x-real-ip") || 
-             "unknown"
+  // Uses structured logging with log levels (INFO level, can be filtered)
+  const user = token ? {
+    id: token.id as string,
+    email: token.email as string,
+    role: token.role as string,
+  } : null
+
   const referer = request.headers.get("referer") || "direct"
-  const method = request.method
+  const userAgent = request.headers.get("user-agent") || "unknown"
   
-  if (token) {
-    // Log authenticated user activity
-    console.log(`[ACTIVITY] ${timestamp} | ${method} ${pathname} | User: ${token.email} (${token.role}) | IP: ${ip} | Referer: ${referer}`)
-  } else {
-    // Log unauthenticated access attempts
-    console.log(`[ACTIVITY] ${timestamp} | ${method} ${pathname} | User: UNAUTHENTICATED | IP: ${ip} | Referer: ${referer} | UA: ${userAgent.substring(0, 100)}`)
-  }
+  logActivity(
+    token ? "PAGE_VIEW" : "UNAUTHENTICATED_ACCESS",
+    pathname,
+    request.method,
+    user,
+    {
+      referer,
+      userAgent: userAgent.substring(0, 100), // Limit length
+    },
+    request
+  )
 
   // Protected routes - require authentication
   if (!token) {

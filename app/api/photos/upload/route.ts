@@ -3,6 +3,7 @@ import { auth } from "@/lib/auth"
 import { prisma } from "@/lib/prisma"
 import { sendNewPhotoEmail } from "@/lib/email"
 import { logActivity } from "@/lib/activity-log"
+import { logger } from "@/lib/logger"
 import { writeFile } from "fs/promises"
 import { join } from "path"
 import { existsSync, mkdirSync } from "fs"
@@ -86,9 +87,9 @@ export async function POST(req: NextRequest) {
       const uploadsDir = join(process.cwd(), "public", "uploads")
       if (!existsSync(uploadsDir)) {
         mkdirSync(uploadsDir, { recursive: true })
-        console.log(`[UPLOAD] Created uploads directory: ${uploadsDir}`)
+        // DEBUG level: directory creation is normal operation
+        logger.debug("Created uploads directory", { path: uploadsDir })
       }
-      console.log(`[UPLOAD] Using uploads directory: ${uploadsDir} (exists: ${existsSync(uploadsDir)})`)
 
       // Filename is generated server-side (timestamp + random), safe for path.join
       const filepath = join(uploadsDir, filename)
@@ -98,9 +99,14 @@ export async function POST(req: NextRequest) {
       const { access } = await import("fs/promises")
       try {
         await access(filepath)
-        console.log(`[UPLOAD] File saved successfully: ${filepath}`)
+        // DEBUG level: file save verification is normal operation
+        logger.debug("File saved successfully", { filepath })
       } catch (error) {
-        console.error(`[UPLOAD] File write verification failed: ${filepath}`, error)
+        // ERROR level: file write failure is an error condition
+        logger.error("File write verification failed", {
+          filepath,
+          error: error instanceof Error ? error : new Error(String(error)),
+        })
         throw new Error("Failed to save file to disk")
       }
 
@@ -166,7 +172,11 @@ export async function POST(req: NextRequest) {
       allUsers.map((user: { id: string; email: string; name: string }) =>
         sendNewPhotoEmail(user.email, user.name, photo.id, photo.uploader.name).catch(
           (err) => {
-            console.error("Failed to send email to:", user.email, err)
+            logger.error("Failed to send email", {
+              email: user.email,
+              photoId: photo.id,
+              error: err instanceof Error ? err : new Error(String(err)),
+            })
           }
         )
       )
@@ -189,7 +199,9 @@ export async function POST(req: NextRequest) {
 
     return NextResponse.json({ photo }, { status: 201 })
   } catch (error) {
-    console.error("Error uploading photo:", error)
+    logger.error("Error uploading photo", {
+      error: error instanceof Error ? error : new Error(String(error)),
+    })
     return NextResponse.json(
       { error: "Internal server error" },
       { status: 500 }

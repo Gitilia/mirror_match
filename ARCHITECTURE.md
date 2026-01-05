@@ -233,7 +233,7 @@ model Guess {
 **Flow:**
 1. User navigates to `/upload`
 2. Uploads photo file or enters photo URL and answer name
-3. Form submits to `POST /api/photos/upload` (file upload) or `POST /api/photos` (URL)
+3. Form submits to `POST /api/photos/upload` (supports both file and URL uploads)
 4. API route:
    - Verifies session
    - For file uploads:
@@ -253,8 +253,8 @@ model Guess {
 5. User redirected to photo detail page
 
 **API Routes:**
-- `app/api/photos/upload/route.ts` - File upload endpoint
-- `app/api/photos/route.ts` - URL upload endpoint (legacy)
+- `app/api/photos/upload/route.ts` - Single photo upload endpoint (supports both file and URL uploads)
+- `app/api/photos/upload-multiple/route.ts` - Multiple photo upload endpoint
 - `app/api/uploads/[filename]/route.ts` - Serves uploaded files
 
 **File Storage:**

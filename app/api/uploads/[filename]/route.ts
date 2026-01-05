@@ -1,4 +1,5 @@
 import { NextRequest, NextResponse } from "next/server"
+import { logger } from "@/lib/logger"
 import { readFile } from "fs/promises"
 import { join } from "path"
 import { existsSync } from "fs"
@@ -7,8 +8,9 @@ export async function GET(
   request: NextRequest,
   { params }: { params: Promise<{ filename: string }> }
 ) {
+  let filename: string | undefined
   try {
-    const { filename } = await params
+    filename = (await params).filename
     
     // Sanitize filename - only allow alphanumeric, dots, hyphens
     if (!/^[a-zA-Z0-9._-]+$/.test(filename)) {
@@ -26,7 +28,11 @@ export async function GET(
     
     // Check if file exists
     if (!existsSync(filepath)) {
-      console.error(`[UPLOAD] File not found: ${filepath} (cwd: ${process.cwd()})`)
+      logger.warn("File not found", {
+        filepath,
+        filename,
+        cwd: process.cwd(),
+      })
       return NextResponse.json({ error: "File not found" }, { status: 404 })
     }
     
@@ -49,7 +55,10 @@ export async function GET(
       },
     })
   } catch (error) {
-    console.error("[UPLOAD] Error serving file:", error)
+    logger.error("Error serving file", {
+      filename: filename || "unknown",
+      error: error instanceof Error ? error : new Error(String(error)),
+    })
     return NextResponse.json(
       { error: "Internal server error" },
       { status: 500 }

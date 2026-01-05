@@ -1,9 +1,29 @@
 import { auth } from "@/lib/auth"
 import { NextResponse } from "next/server"
 import { cookies } from "next/headers"
+import { SESSION_COOKIE_NAME } from "@/lib/constants"
+import { logger } from "@/lib/logger"
 
+/**
+ * Debug endpoint for session inspection
+ * ADMIN ONLY - Protected endpoint for debugging session issues
+ * 
+ * This endpoint should only be accessible to administrators.
+ * Consider removing in production or restricting further.
+ */
 export async function GET(request: Request) {
   try {
+    // Require admin authentication
+    const session = await auth()
+    
+    if (!session || session.user.role !== "ADMIN") {
+      logger.warn("Unauthorized access attempt to debug endpoint", {
+        userId: session?.user?.id,
+        userRole: session?.user?.role,
+        path: "/api/debug/session",
+      })
+      return NextResponse.json({ error: "Unauthorized" }, { status: 401 })
+    }
     const cookieHeader = request.headers.get("cookie") || ""
     
     // Parse cookies from header first
@@ -16,29 +36,29 @@ export async function GET(request: Request) {
     })
     
     // Try to get session token from cookies
-    const sessionTokenFromHeader = cookieMap["__Secure-authjs.session-token"] || "NOT FOUND"
+    const sessionTokenFromHeader = cookieMap[SESSION_COOKIE_NAME] || "NOT FOUND"
     
-    // Try to call auth() - this might fail or return null
-    let session = null
+    // Try to call auth() again for debugging (we already have session above, but this is for testing)
     let authError = null
     try {
-      console.log("Debug endpoint: Calling auth()...")
-      session = await auth()
-      console.log("Debug endpoint: auth() returned", {
+      // Already called above, but keeping for backward compatibility in response
+      logger.debug("Debug endpoint: Session retrieved", {
         hasSession: !!session,
-        sessionUser: session?.user,
-        sessionKeys: session ? Object.keys(session) : []
+        userId: session?.user?.id,
+        userRole: session?.user?.role,
       })
     } catch (err) {
       authError = err instanceof Error ? err.message : String(err)
-      console.error("Debug endpoint: auth() error", authError)
+      logger.error("Debug endpoint: auth() error", {
+        error: err instanceof Error ? err : new Error(String(err)),
+      })
     }
     
     // Try to get cookie from Next.js cookie store
     let sessionTokenFromStore = "NOT ACCESSIBLE"
     try {
       const cookieStore = await cookies()
-      sessionTokenFromStore = cookieStore.get("__Secure-authjs.session-token")?.value || "NOT FOUND"
+      sessionTokenFromStore = cookieStore.get(SESSION_COOKIE_NAME)?.value || "NOT FOUND"
     } catch {
       // Cookie store might not be accessible in all contexts
     }

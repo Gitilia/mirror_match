@@ -1,6 +1,9 @@
 /**
  * Activity logging utility for tracking user actions
+ * Uses structured logging with log levels for better production control
  */
+
+import { logger } from './logger'
 
 export interface ActivityLog {
   timestamp: string
@@ -14,6 +17,18 @@ export interface ActivityLog {
   details?: Record<string, unknown>
 }
 
+/**
+ * Log user activity with structured data
+ * Uses INFO level logging - can be filtered via LOG_LEVEL environment variable
+ * 
+ * @param action - The action being performed (e.g., "PHOTO_UPLOAD", "GUESS_SUBMITTED")
+ * @param path - The request path
+ * @param method - The HTTP method
+ * @param user - Optional user object (id, email, role)
+ * @param details - Optional additional context data
+ * @param request - Optional Request object for extracting IP address
+ * @returns Structured activity log object
+ */
 export function logActivity(
   action: string,
   path: string,
@@ -21,7 +36,7 @@ export function logActivity(
   user?: { id: string; email: string; role: string } | null,
   details?: Record<string, unknown>,
   request?: Request
-) {
+): ActivityLog {
   const timestamp = new Date().toISOString()
   const ip = request?.headers.get("x-forwarded-for") || 
              request?.headers.get("x-real-ip") || 
@@ -39,14 +54,17 @@ export function logActivity(
     details
   }
   
-  // Format: [ACTION] timestamp | method path | User: email (role) | IP: ip | Details: {...}
-  const userInfo = user 
-    ? `${user.email} (${user.role})` 
-    : "UNAUTHENTICATED"
-  
-  const detailsStr = details ? ` | Details: ${JSON.stringify(details)}` : ""
-  
-  console.log(`[${action}] ${timestamp} | ${method} ${path} | User: ${userInfo} | IP: ${ip.split(",")[0].trim()}${detailsStr}`)
+  // Use structured logging with INFO level
+  // This allows filtering via LOG_LEVEL environment variable
+  logger.info(`Activity: ${action}`, {
+    method,
+    path,
+    userId: user?.id,
+    userEmail: user?.email,
+    userRole: user?.role,
+    ip: ip.split(",")[0].trim(),
+    ...(details && { details }),
+  })
   
   return log
 }

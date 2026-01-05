@@ -1,7 +1,31 @@
+/**
+ * Multiple Photo Upload Endpoint
+ * 
+ * POST /api/photos/upload-multiple
+ * 
+ * Uploads multiple photos in a single request. Supports both file uploads and URL-based uploads.
+ * 
+ * This endpoint is used by the upload page for batch uploads. It processes multiple photos
+ * in parallel and sends email notifications for all successfully uploaded photos.
+ * 
+ * Form Data:
+ * - photo_{index}_file: File object (optional, if using file upload)
+ * - photo_{index}_url: URL string (optional, if using URL upload)
+ * - photo_{index}_answerName: Answer name (required)
+ * - photo_{index}_points: Points value (optional, defaults to 1)
+ * - photo_{index}_penaltyEnabled: "true" or "false" (optional)
+ * - photo_{index}_penaltyPoints: Penalty points (optional)
+ * - photo_{index}_maxAttempts: Maximum attempts (optional)
+ * - count: Number of photos being uploaded
+ * 
+ * Related endpoints:
+ * - POST /api/photos/upload - Single photo upload (supports both file and URL)
+ */
 import { NextRequest, NextResponse } from "next/server"
 import { auth } from "@/lib/auth"
 import { prisma } from "@/lib/prisma"
 import { sendNewPhotoEmail } from "@/lib/email"
+import { logger } from "@/lib/logger"
 import { writeFile } from "fs/promises"
 import { join } from "path"
 import { existsSync, mkdirSync } from "fs"
@@ -204,7 +228,11 @@ export async function POST(req: NextRequest) {
               photo.id,
               photo.uploader.name
             ).catch((err) => {
-              console.error("Failed to send email to:", user.email, "for photo:", photo.id, err)
+              logger.error("Failed to send email", {
+                email: user.email,
+                photoId: photo.id,
+                error: err instanceof Error ? err : new Error(String(err)),
+              })
             })
           )
         )
@@ -216,7 +244,9 @@ export async function POST(req: NextRequest) {
       { status: 201 }
     )
   } catch (error) {
-    console.error("Error uploading photos:", error)
+    logger.error("Error uploading photos", {
+      error: error instanceof Error ? error : new Error(String(error)),
+    })
     return NextResponse.json(
       { error: "Internal server error" },
       { status: 500 }

@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from "next/server"
 import { auth } from "@/lib/auth"
 import { prisma } from "@/lib/prisma"
+import { logger } from "@/lib/logger"
 import { unlink } from "fs/promises"
 import { join } from "path"
 import { existsSync } from "fs"
@@ -47,7 +48,10 @@ export async function DELETE(
         try {
           await unlink(filepath)
         } catch (error) {
-          console.error("Failed to delete file:", filepath, error)
+          logger.error("Failed to delete file", {
+            filepath,
+            error: error instanceof Error ? error : new Error(String(error)),
+          })
           // Continue with database deletion even if file deletion fails
         }
       }
@@ -60,7 +64,9 @@ export async function DELETE(
 
     return NextResponse.json({ success: true, message: "Photo deleted successfully" })
   } catch (error) {
-    console.error("Error deleting photo:", error)
+    logger.error("Error deleting photo", {
+      error: error instanceof Error ? error : new Error(String(error)),
+    })
     return NextResponse.json(
       { error: "Internal server error" },
       { status: 500 }
