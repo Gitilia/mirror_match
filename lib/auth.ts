@@ -9,13 +9,8 @@ import { logger } from "./logger"
 function getNextAuthSecret(): string {
   const secret = process.env.NEXTAUTH_SECRET
   if (!secret) {
-    // Only throw in non-build contexts (runtime)
-    // During build, Next.js might not have env vars available
-    if (process.env.NEXT_PHASE !== "phase-production-build") {
-      throw new Error("NEXTAUTH_SECRET is not set. Define it to enable authentication.")
-    }
-    // Return a placeholder during build - will fail at runtime if not set
-    return "build-time-placeholder"
+    // Always throw at runtime - this is a critical configuration error
+    throw new Error("NEXTAUTH_SECRET is not set. Define it to enable authentication.")
   }
   return secret
 }

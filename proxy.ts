@@ -13,12 +13,14 @@ export async function proxy(request: NextRequest) {
 
   // Get token (works in Edge runtime)
   // For HTTPS, NextAuth adds __Secure- prefix automatically
-  // Don't specify cookieName - let getToken auto-detect the correct cookie name
-  // It will automatically look for both prefixed and non-prefixed versions
+  // getToken should handle the prefix, but we specify the base name
+  const isHttps = request.url.startsWith("https://")
+  const cookieName = isHttps ? `__Secure-authjs.session-token` : `authjs.session-token`
+  
   const token = await getToken({ 
     req: request,
     secret: process.env.NEXTAUTH_SECRET,
-    // Don't specify cookieName - getToken will auto-detect __Secure- prefix for HTTPS
+    cookieName: cookieName,
   })
   
   // User activity logging - track all page visits and API calls
