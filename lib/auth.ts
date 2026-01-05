@@ -12,29 +12,10 @@ if (!nextAuthSecret) {
 // Determine if we should use secure cookies based on AUTH_URL/NEXTAUTH_URL
 // Auth.js v5 derives this from the origin it detects, so we need to be explicit
 const authUrl = process.env.AUTH_URL || process.env.NEXTAUTH_URL || "http://localhost:3000"
-const isDev = process.env.NODE_ENV === "development"
 const isHttp = authUrl.startsWith("http://")
-
-// Explicitly control useSecureCookies - only true when URL is https://
-// This prevents Auth.js from auto-detecting HTTPS and adding prefixes on HTTP
-const useSecureCookies = !isHttp
-
-// Log cookie configuration for debugging (only in development)
-if (isDev) {
-  logger.debug("NextAuth cookie configuration", {
-    authUrl,
-    isDev,
-    isHttp,
-    useSecureCookies,
-    nodeEnv: process.env.NODE_ENV,
-    hasVercelEnv: !!process.env.VERCEL,
-    hasAuthTrustHost: !!process.env.AUTH_TRUST_HOST,
-  })
-}
 
 export const { handlers, auth, signIn, signOut } = NextAuth({
   // trustHost must be true for NextAuth v5 to work, even on localhost
-  // We control HTTPS detection via cookie configuration instead
   trustHost: true,
   debug: process.env.NODE_ENV !== "production",
   basePath: "/api/auth",
