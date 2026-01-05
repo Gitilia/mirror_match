@@ -26,13 +26,21 @@ export default function LoginPage() {
       if (result?.error) {
         setError("Invalid email or password")
       } else if (result?.ok) {
+        // Force a session refresh before redirect
+        // This ensures the session cookie is properly set and read
+        await fetch("/api/auth/session", { method: "GET" })
+        
         // Check if there's a callback URL in the query params
         const params = new URLSearchParams(window.location.search)
         const callbackUrl = params.get("callbackUrl") || "/photos"
         console.log("Redirecting to:", callbackUrl)
-        // Use window.location.href to force a full page reload
-        // This ensures the session cookie is read before middleware checks authentication
-        window.location.href = callbackUrl
+        
+        // Small delay to ensure cookie is set
+        setTimeout(() => {
+          // Use window.location.href to force a full page reload
+          // This ensures the session cookie is read before middleware checks authentication
+          window.location.href = callbackUrl
+        }, 100)
       } else {
         setError("Login failed. Please try again.")
       }

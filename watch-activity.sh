@@ -23,10 +23,28 @@ if [ -n "$LOG_FILE" ]; then
   # Watch log file
   if [ ! -f "$LOG_FILE" ]; then
     echo "⚠ Warning: Log file '$LOG_FILE' does not exist yet."
-    echo "   Waiting for it to be created..."
+    echo "   Waiting for it to be created (will wait up to 30 seconds)..."
     echo ""
+    # Wait for file to be created
+    for i in {1..30}; do
+      if [ -f "$LOG_FILE" ]; then
+        echo "✓ Log file created"
+        break
+      fi
+      sleep 1
+    done
+    if [ ! -f "$LOG_FILE" ]; then
+      echo "❌ Log file still doesn't exist after 30 seconds"
+      echo "   Make sure the server is running: ./rebuild.sh prod"
+      exit 1
+    fi
   fi
-  tail -f "$LOG_FILE" 2>/dev/null | grep -E "\[ACTIVITY\]|\[PHOTO_UPLOAD\]|\[GUESS_SUBMIT\]|Activity:|INFO.*Activity:"
+  tail -f "$LOG_FILE" 2>/dev/null | grep -E "\[ACTIVITY\]|\[PHOTO_UPLOAD\]|\[GUESS_SUBMIT\]|Activity:|INFO.*Activity:" || {
+    echo "⚠ No activity logs found. Make sure:"
+    echo "   1. Server is running"
+    echo "   2. LOG_LEVEL is set to INFO or DEBUG"
+    echo "   3. Users are actually using the site"
+  }
 elif systemctl is-active --quiet app-backend 2>/dev/null; then
   # Use systemd journal if service is active
   echo "Using systemd journal (app-backend service)"

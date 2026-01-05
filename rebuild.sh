@@ -8,7 +8,10 @@ set -e
 
 # Get the directory where this script is located
 SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
-cd "$SCRIPT_DIR"
+cd "$SCRIPT_DIR" || {
+  echo "Error: Could not change to script directory: $SCRIPT_DIR"
+  exit 1
+}
 
 MODE=${1:-prod}
 
@@ -71,13 +74,23 @@ else
   export NODE_ENV=production
   unset AUTH_TRUST_HOST
   npm run start > "$LOG_FILE" 2>&1 &
-  echo "Server PID: $!"
+  SERVER_PID=$!
+  echo "Server PID: $SERVER_PID"
   echo "Log file: $LOG_FILE"
   echo ""
-  sleep 3
-  if curl -s -o /dev/null -w "%{http_code}" http://localhost:3000 | grep -q "200\|307"; then
-    echo "✓ Server is running on http://localhost:3000"
-  else
-    echo "⚠ Server may still be starting. Check logs: tail -f $LOG_FILE"
-  fi
+  
+  # Wait for server to start (check log file for "Ready" message or check HTTP)
+  echo "Waiting for server to start..."
+  for i in {1..30}; do
+    if curl -s -o /dev/null -w "%{http_code}" http://localhost:3000 2>/dev/null | grep -q "200\|307\|404"; then
+      echo "✓ Server is running on http://localhost:3000"
+      break
+    fi
+    if [ $i -eq 30 ]; then
+      echo "⚠ Server may still be starting. Check logs: tail -f $LOG_FILE"
+      echo "   Or check if process is running: ps -p $SERVER_PID"
+    else
+      sleep 1
+    fi
+  done
 fi
