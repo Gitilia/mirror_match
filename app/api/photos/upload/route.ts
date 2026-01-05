@@ -93,6 +93,7 @@ export async function POST(req: NextRequest) {
         // DEBUG level: directory creation is normal operation
         logger.debug("Created uploads directory", { path: uploadsDir })
       }
+      console.log(`[UPLOAD] Using uploads directory: ${uploadsDir} (exists: ${existsSync(uploadsDir)})`)
 
       // Filename is generated server-side (timestamp + random), safe for path.join
       const filepath = join(uploadsDir, filename)

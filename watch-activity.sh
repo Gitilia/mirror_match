@@ -1,5 +1,6 @@
 #!/bin/bash
 # Watch user activity logs in real-time
+<<<<<<< HEAD
 # 
 # This script monitors logs for MirrorMatch activity.
 # It can watch systemd journal logs OR application log files.
@@ -14,11 +15,15 @@
 #   - If running as systemd service: ./watch-activity.sh (uses journalctl)
 
 LOG_FILE="${1:-}"
+=======
+# Usage: ./watch-activity.sh
+>>>>>>> gitea/main
 
 echo "Watching user activity logs..."
 echo "Press Ctrl+C to stop"
 echo ""
 
+<<<<<<< HEAD
 if [ -n "$LOG_FILE" ]; then
   # Watch log file
   if [ ! -f "$LOG_FILE" ]; then
@@ -81,3 +86,7 @@ else
     exit 1
   fi
 fi
+=======
+# Watch for activity logs (ACTIVITY, PHOTO_UPLOAD, GUESS_SUBMIT)
+sudo journalctl -u app-backend -f | grep -E "\[ACTIVITY\]|\[PHOTO_UPLOAD\]|\[GUESS_SUBMIT\]"
+>>>>>>> gitea/main
