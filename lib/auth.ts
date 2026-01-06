@@ -2,15 +2,29 @@ import NextAuth from "next-auth"
 import Credentials from "next-auth/providers/credentials"
 import { prisma } from "./prisma"
 import bcrypt from "bcryptjs"
+import { logger } from "./logger"
 
-const nextAuthSecret = process.env.NEXTAUTH_SECRET
-if (!nextAuthSecret) {
-  throw new Error("NEXTAUTH_SECRET is not set. Define it to enable authentication.")
+// Lazy check for NEXTAUTH_SECRET - only validate when actually needed
+// This prevents build-time errors when the secret isn't available
+function getNextAuthSecret(): string {
+  const secret = process.env.NEXTAUTH_SECRET
+  if (!secret) {
+    // Always throw at runtime - this is a critical configuration error
+    throw new Error("NEXTAUTH_SECRET is not set. Define it to enable authentication.")
+  }
+  return secret
 }
 
+// Determine if we should use secure cookies based on AUTH_URL/NEXTAUTH_URL
+// Auth.js v5 derives this from the origin it detects, so we need to be explicit
+const authUrl = process.env.AUTH_URL || process.env.NEXTAUTH_URL || "http://localhost:3000"
+const isHttp = authUrl.startsWith("http://")
+
 export const { handlers, auth, signIn, signOut } = NextAuth({
+  // trustHost must be true for NextAuth v5 to work, even on localhost
   trustHost: true,
   debug: process.env.NODE_ENV !== "production",
+  basePath: "/api/auth",
   providers: [
     Credentials({
       name: "Credentials",
@@ -48,7 +62,7 @@ export const { handlers, auth, signIn, signOut } = NextAuth({
             role: user.role,
           }
         } catch (err) {
-          console.error("Auth authorize error:", err)
+          logger.error("Auth authorize error", err instanceof Error ? err : new Error(String(err)))
           return null
         }
       }
@@ -61,27 +75,22 @@ export const { handlers, auth, signIn, signOut } = NextAuth({
         token.role = (user as { role: string }).role
         token.email = user.email
         token.name = user.name
-        console.log("JWT callback: user added to token", { userId: user.id, email: user.email })
+        // DEBUG level: only logs in development or when LOG_LEVEL=DEBUG
+        logger.debug("JWT callback: user added to token", { 
+          userId: user.id, 
+          email: user.email 
+        })
       } else {
-        console.log("JWT callback: no user, token exists", { 
+        // DEBUG level: token refresh (normal operation, only log in debug mode)
+        logger.debug("JWT callback: token refresh", { 
           hasToken: !!token,
-          tokenKeys: token ? Object.keys(token) : [],
           tokenId: token?.id,
           tokenEmail: token?.email,
-          tokenName: token?.name,
-          tokenRole: token?.role
         })
       }
       return token
     },
     async session({ session, token }) {
-      console.log("Session callback: called", {
-        hasToken: !!token,
-        hasSession: !!session,
-        tokenId: token?.id,
-        tokenEmail: token?.email,
-        stackTrace: new Error().stack?.split('\n').slice(1, 4).join('\n')
-      })
       // Always ensure session.user exists when token exists
       if (token && (token.id || token.email)) {
         session.user = {
@@ -91,23 +100,17 @@ export const { handlers, auth, signIn, signOut } = NextAuth({
           name: (token.name as string) || session.user?.name || "",
           role: token.role as string,
         }
-        console.log("Session callback: session created", { 
+        // DEBUG level: session creation is normal operation, only log in debug mode
+        logger.debug("Session callback: session created", { 
           userId: token.id, 
           email: token.email,
-          hasUser: !!session.user,
-          userKeys: session.user ? Object.keys(session.user) : [],
           userRole: token.role,
-          sessionUser: session.user,
-          sessionExpires: session.expires,
-          fullSession: JSON.stringify(session, null, 2)
         })
       } else {
-        console.warn("Session callback: token missing or invalid", { 
+        // WARN level: token missing/invalid is a warning condition
+        logger.warn("Session callback: token missing or invalid", { 
           hasToken: !!token,
-          tokenKeys: token ? Object.keys(token) : [],
           hasSession: !!session,
-          sessionKeys: session ? Object.keys(session) : [],
-          sessionUser: session?.user,
           tokenId: token?.id,
           tokenEmail: token?.email
         })
@@ -124,16 +127,39 @@ export const { handlers, auth, signIn, signOut } = NextAuth({
     strategy: "jwt",
     maxAge: 30 * 24 * 60 * 60, // 30 days
   },
-  cookies: {
-    sessionToken: {
-      name: `__Secure-authjs.session-token`,
-      options: {
-        httpOnly: true,
-        sameSite: "lax",
-        path: "/",
-        secure: true, // Always secure in production (HTTPS required)
-      },
-    },
-  },
-  secret: nextAuthSecret,
+  // Explicitly configure cookies for HTTP (localhost)
+  // For HTTPS, let Auth.js defaults handle it (prefixes + Secure)
+  cookies: isHttp
+    ? {
+        // localhost / pure HTTP: no prefixes, no Secure
+        sessionToken: {
+          name: "authjs.session-token",
+          options: {
+            httpOnly: true,
+            sameSite: "lax",
+            path: "/",
+            secure: false,
+          },
+        },
+        csrfToken: {
+          name: "authjs.csrf-token",
+          options: {
+            httpOnly: true,
+            sameSite: "lax",
+            path: "/",
+            secure: false,
+          },
+        },
+        callbackUrl: {
+          name: "authjs.callback-url",
+          options: {
+            httpOnly: true,
+            sameSite: "lax",
+            path: "/",
+            secure: false,
+          },
+        },
+      }
+    : undefined, // Let Auth.js defaults handle HTTPS envs (prefixes + Secure)
+  secret: getNextAuthSecret(),
 })

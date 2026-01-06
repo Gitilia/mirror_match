@@ -166,12 +166,17 @@ npm start
 - Photos are uploaded to `public/uploads/` directory
 - Files are served via `/api/uploads/[filename]` API route
 - Ensure the uploads directory has proper write permissions
+
+**Upload Endpoints:**
+- `POST /api/photos/upload` - Single photo upload (supports both file and URL uploads)
+- `POST /api/photos/upload-multiple` - Multiple photo uploads in batch (used by upload page)
 - Files are stored on the filesystem (not in database)
 
 **Monitoring Activity:**
 - User activity is logged to console/systemd logs
 - Watch logs in real-time: `sudo journalctl -u app-backend -f | grep -E "\[ACTIVITY\]|\[PHOTO_UPLOAD\]|\[GUESS_SUBMIT\]"`
 - Activity logs include: page visits, photo uploads, guess submissions
+- **Note:** For local development, use `./watch-activity.sh` script (if systemd/journalctl is not available, check application logs directly)
 
 ## Database Commands
 

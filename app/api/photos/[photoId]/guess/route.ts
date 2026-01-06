@@ -3,6 +3,10 @@ import { auth } from "@/lib/auth"
 import { prisma } from "@/lib/prisma"
 import { normalizeString } from "@/lib/utils"
 import { logActivity } from "@/lib/activity-log"
+import { logger } from "@/lib/logger"
+
+// Mark this route as dynamic to prevent build-time data collection
+export const dynamic = "force-dynamic"
 
 export async function POST(
   req: NextRequest,
@@ -151,7 +155,9 @@ export async function POST(
       pointsChange 
     })
   } catch (error) {
-    console.error("Error submitting guess:", error)
+    logger.error("Error submitting guess", {
+      error: error instanceof Error ? error : new Error(String(error)),
+    })
     return NextResponse.json(
       { error: "Internal server error" },
       { status: 500 }

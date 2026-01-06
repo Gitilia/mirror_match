@@ -3,6 +3,7 @@ import { Geist, Geist_Mono } from "next/font/google";
 import "./globals.css";
 import Providers from "@/components/Providers";
 import Navigation from "@/components/Navigation";
+import HelpModal from "@/components/HelpModal";
 
 const geistSans = Geist({
   variable: "--font-geist-sans",
@@ -32,6 +33,7 @@ export default function RootLayout({
         <Providers>
           <Navigation />
           <main className="min-h-screen bg-gray-50 overflow-x-hidden">{children}</main>
+          <HelpModal />
         </Providers>
       </body>
     </html>

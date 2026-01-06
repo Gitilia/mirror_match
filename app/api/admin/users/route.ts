@@ -2,6 +2,10 @@ import { NextRequest, NextResponse } from "next/server"
 import { auth } from "@/lib/auth"
 import { prisma } from "@/lib/prisma"
 import { hashPassword } from "@/lib/utils"
+import { logger } from "@/lib/logger"
+
+// Mark this route as dynamic to prevent build-time data collection
+export const dynamic = "force-dynamic"
 
 export async function POST(req: NextRequest) {
   try {
@@ -53,7 +57,9 @@ export async function POST(req: NextRequest) {
       { status: 201 }
     )
   } catch (error) {
-    console.error("Error creating user:", error)
+    logger.error("Error creating user", {
+      error: error instanceof Error ? error : new Error(String(error)),
+    })
     return NextResponse.json(
       { error: "Internal server error" },
       { status: 500 }

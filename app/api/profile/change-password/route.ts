@@ -1,8 +1,12 @@
 import { NextRequest, NextResponse } from "next/server"
 import { auth } from "@/lib/auth"
 import { prisma } from "@/lib/prisma"
+import { logger } from "@/lib/logger"
 import bcrypt from "bcryptjs"
 import { hashPassword } from "@/lib/utils"
+
+// Mark this route as dynamic to prevent build-time data collection
+export const dynamic = "force-dynamic"
 
 export async function POST(req: NextRequest) {
   try {
@@ -44,7 +48,9 @@ export async function POST(req: NextRequest) {
 
     return NextResponse.json({ success: true })
   } catch (error) {
-    console.error("Error changing password:", error)
+    logger.error("Error changing password", {
+      error: error instanceof Error ? error : new Error(String(error)),
+    })
     return NextResponse.json(
       { error: "Internal server error" },
       { status: 500 }

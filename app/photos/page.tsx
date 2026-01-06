@@ -4,33 +4,34 @@ import { prisma } from "@/lib/prisma"
 import Link from "next/link"
 import PhotoThumbnail from "@/components/PhotoThumbnail"
 import DeletePhotoButton from "@/components/DeletePhotoButton"
+import { logger } from "@/lib/logger"
 
 // Enable caching for this page
 export const revalidate = 60 // Revalidate every 60 seconds
 
 export default async function PhotosPage() {
-  console.log("PhotosPage: Starting, calling auth()...")
+  // DEBUG level: only logs in development or when LOG_LEVEL=DEBUG
+  logger.debug("PhotosPage: Starting, calling auth()")
   const session = await auth()
   
-  console.log("PhotosPage: auth() returned", {
-    hasSession: !!session,
-    sessionType: typeof session,
-    sessionUser: session?.user,
-    sessionKeys: session ? Object.keys(session) : [],
-    sessionString: JSON.stringify(session, null, 2)
-  })
-
   if (!session) {
-    console.log("PhotosPage: No session, redirecting to login")
+    logger.debug("PhotosPage: No session, redirecting to login")
     redirect("/login")
   }
   
   if (!session.user) {
-    console.log("PhotosPage: Session exists but no user, redirecting to login")
+    // WARN level: session exists but no user is a warning condition
+    logger.warn("PhotosPage: Session exists but no user, redirecting to login", {
+      hasSession: !!session,
+      sessionKeys: session ? Object.keys(session) : [],
+    })
     redirect("/login")
   }
   
-  console.log("PhotosPage: Session valid, rendering page")
+  logger.debug("PhotosPage: Session valid, rendering page", {
+    userId: session.user.id,
+    userEmail: session.user.email,
+  })
 
   // Limit to 50 photos per page for performance
   const photos = await prisma.photo.findMany({
