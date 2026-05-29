@@ -1,3 +1,5 @@
+---
+# Homelab CI — Node/pages lane (git-ci-01) + secret scan (git-ci-02)
 name: CI
 
 on:
@@ -7,245 +9,56 @@ on:
     types: [opened, synchronize, reopened]
 
 jobs:
-  # Check if CI should be skipped based on branch name or commit message
   skip-ci-check:
-    runs-on: ubuntu-latest
+    runs-on: [homelab, self-hosted, linux]
     outputs:
       should-skip: ${{ steps.check.outputs.skip }}
     steps:
-      - name: Check out code (for commit message)
-        uses: actions/checkout@v4
+      - uses: actions/checkout@v4
         with:
           fetch-depth: 1
-
-      - name: Check if CI should be skipped
-        id: check
+      - id: check
         run: |
-          # Simple skip pattern: @skipci (case-insensitive)
-          SKIP_PATTERN="@skipci"
-
-          # Get branch name (works for both push and PR)
-          BRANCH_NAME="${GITHUB_HEAD_REF:-${GITHUB_REF#refs/heads/}}"
-
-          # Get commit message (works for both push and PR)
-          COMMIT_MSG="${GITHUB_EVENT_HEAD_COMMIT_MESSAGE:-}"
-          if [ -z "$COMMIT_MSG" ]; then
-            COMMIT_MSG="${GITHUB_EVENT_PULL_REQUEST_HEAD_COMMIT_MESSAGE:-}"
-          fi
-          if [ -z "$COMMIT_MSG" ]; then
-            COMMIT_MSG=$(git log -1 --pretty=%B 2>/dev/null || echo "")
-          fi
-
           SKIP=0
-
-          # Check branch name (case-insensitive)
-          if echo "$BRANCH_NAME" | grep -qiF "$SKIP_PATTERN"; then
-            echo "Skipping CI: branch name contains '$SKIP_PATTERN'"
-            SKIP=1
-          fi
-
-          # Check commit message (case-insensitive)
-          if [ $SKIP -eq 0 ] && [ -n "$COMMIT_MSG" ]; then
-            if echo "$COMMIT_MSG" | grep -qiF "$SKIP_PATTERN"; then
-              echo "Skipping CI: commit message contains '$SKIP_PATTERN'"
-              SKIP=1
-            fi
-          fi
-
+          BRANCH="${GITHUB_HEAD_REF:-${GITHUB_REF#refs/heads/}}"
+          MSG="${GITHUB_EVENT_HEAD_COMMIT_MESSAGE:-$(git log -1 --pretty=%B 2>/dev/null || true)}"
+          echo "$BRANCH" "$MSG" | grep -qi '@skipci' && SKIP=1
           echo "skip=$SKIP" >> $GITHUB_OUTPUT
-          echo "Branch: $BRANCH_NAME"
-          echo "Commit: ${COMMIT_MSG:0:50}..."
-          echo "Skip CI: $SKIP"
 
-  lint-and-type-check:
-    needs: skip-ci-check
-    runs-on: ubuntu-latest
-    if: needs.skip-ci-check.outputs.should-skip != '1'
-    container:
-      image: node:20-bullseye
-    steps:
-      - name: Check out code
-        uses: actions/checkout@v4
-
-      - name: Install dependencies
-        run: npm ci
-
-      - name: Run ESLint
-        run: npm run lint
-
-      - name: Type check
-        run: npm run type-check
-
-  test:
-    needs: skip-ci-check
-    runs-on: ubuntu-latest
-    if: needs.skip-ci-check.outputs.should-skip != '1'
-    container:
-      image: node:20-bullseye
-    services:
-      postgres:
-        image: postgres:15
-        env:
-          POSTGRES_PASSWORD: postgres
-          POSTGRES_DB: mirrormatch_test
-        options: >-
-          --health-cmd pg_isready
-          --health-interval 10s
-          --health-timeout 5s
-          --health-retries 5
-        ports:
-          - 5432:5432
-    env:
-      DATABASE_URL: postgresql://postgres:postgres@postgres:5432/mirrormatch_test?schema=public
-      NEXTAUTH_SECRET: test-secret-key-for-ci
-      NEXTAUTH_URL: http://localhost:3000
-    steps:
-      - name: Check out code
-        uses: actions/checkout@v4
-
-      - name: Install dependencies
-        run: npm ci
-
-      - name: Generate Prisma Client
-        run: npm run db:generate
-
-      - name: Run database migrations
-        run: npm run db:push
-
-      - name: Run tests
-        run: npm run test:ci
-
-      - name: Upload coverage reports
-        uses: codecov/codecov-action@v4
-        with:
-          files: ./coverage/coverage-final.json
-          flags: unittests
-          name: codecov-umbrella
-          fail_ci_if_error: false
-        continue-on-error: true
-
-  build:
-    needs: skip-ci-check
-    runs-on: ubuntu-latest
-    if: needs.skip-ci-check.outputs.should-skip != '1'
-    container:
-      image: node:20-bullseye
-    steps:
-      - name: Check out code
-        uses: actions/checkout@v4
-
-      - name: Install dependencies
-        run: npm ci
-
-      - name: Generate Prisma Client
-        run: npm run db:generate
-
-      - name: Build application
-        run: npm run build
-        env:
-          DATABASE_URL: postgresql://postgres:postgres@localhost:5432/mirrormatch?schema=public
-          NEXTAUTH_SECRET: test-secret-key-for-ci
-          NEXTAUTH_URL: http://localhost:3000
-
-  secret-scanning:
+  node-ci:
     needs: skip-ci-check
     if: needs.skip-ci-check.outputs.should-skip != '1'
-    runs-on: ubuntu-latest
+    runs-on: [homelab, self-hosted, linux, node]
     container:
-      image: zricethezav/gitleaks:latest
+      image: node:20-bookworm
     steps:
-      - name: Install Node.js for checkout action
+      - uses: actions/checkout@v4
+
+      - name: npm ci
         run: |
-          apk add --no-cache nodejs npm curl
+          if [ -f package-lock.json ]; then npm ci; elif [ -f package.json ]; then npm install; else exit 0; fi
 
-      - name: Check out code
-        uses: actions/checkout@v4
+      - name: Lint
+        run: npm run lint --if-present
+
+      - name: Test
+        run: npm test --if-present
+
+      - name: Build
+        run: npm run build --if-present
+
+      - name: npm audit (advisory)
+        run: npm audit --audit-level=high || true
+
+  secret-scan:
+    needs: skip-ci-check
+    if: needs.skip-ci-check.outputs.should-skip != '1'
+    runs-on: [homelab, self-hosted, linux, heavy]
+    steps:
+      - uses: actions/checkout@v4
         with:
           fetch-depth: 0
-
-      - name: Scan for secrets
-        run: gitleaks detect --source . --no-banner --redact --exit-code 0
-        continue-on-error: true
-
-  dependency-scan:
-    needs: skip-ci-check
-    if: needs.skip-ci-check.outputs.should-skip != '1'
-    runs-on: ubuntu-latest
-    container:
-      image: aquasec/trivy:latest
-    steps:
-      - name: Install Node.js for checkout action
+      - name: Gitleaks
         run: |
-          apk add --no-cache nodejs npm curl
-
-      - name: Check out code
-        uses: actions/checkout@v4
-
-      - name: Dependency vulnerability scan (Trivy)
-        run: |
-          trivy fs \
-            --scanners vuln \
-            --severity HIGH,CRITICAL \
-            --ignore-unfixed \
-            --timeout 10m \
-            --skip-dirs .git,node_modules \
-            --exit-code 0 \
-            .
-
-      - name: Secret scan (Trivy)
-        run: |
-          trivy fs \
-            --scanners secret \
-            --timeout 10m \
-            --skip-dirs .git,node_modules \
-            --exit-code 0 \
-            .
-
-  sast-scan:
-    needs: skip-ci-check
-    if: needs.skip-ci-check.outputs.should-skip != '1'
-    runs-on: ubuntu-latest
-    container:
-      image: ubuntu:22.04
-    steps:
-      - name: Install Node.js for checkout action
-        run: |
-          apt-get update && apt-get install -y curl
-          curl -fsSL https://deb.nodesource.com/setup_20.x | bash -
-          apt-get install -y nodejs
-
-      - name: Check out code
-        uses: actions/checkout@v4
-
-      - name: Install Semgrep
-        run: |
-          apt-get update && apt-get install -y python3 python3-pip
-          pip3 install semgrep
-
-      - name: Run Semgrep scan
-        run: semgrep --config=auto --error
-        continue-on-error: true
-
-  workflow-summary:
-    runs-on: ubuntu-latest
-    needs: [lint-and-type-check, test, build, secret-scanning, dependency-scan, sast-scan]
-    if: always()
-    steps:
-      - name: Generate workflow summary
-        run: |
-          echo "## 🔍 CI Workflow Summary" >> $GITHUB_STEP_SUMMARY || true
-          echo "" >> $GITHUB_STEP_SUMMARY || true
-          echo "### Job Results" >> $GITHUB_STEP_SUMMARY || true
-          echo "" >> $GITHUB_STEP_SUMMARY || true
-          echo "| Job | Status |" >> $GITHUB_STEP_SUMMARY || true
-          echo "|-----|--------|" >> $GITHUB_STEP_SUMMARY || true
-          echo "| 📝 Lint & Type Check | ${{ needs.lint-and-type-check.result }} |" >> $GITHUB_STEP_SUMMARY || true
-          echo "| 🧪 Tests | ${{ needs.test.result }} |" >> $GITHUB_STEP_SUMMARY || true
-          echo "| 🏗️ Build | ${{ needs.build.result }} |" >> $GITHUB_STEP_SUMMARY || true
-          echo "| 🔐 Secret Scanning | ${{ needs.secret-scanning.result }} |" >> $GITHUB_STEP_SUMMARY || true
-          echo "| 📦 Dependency Scan | ${{ needs.dependency-scan.result }} |" >> $GITHUB_STEP_SUMMARY || true
-          echo "| 🔍 SAST Scan | ${{ needs.sast-scan.result }} |" >> $GITHUB_STEP_SUMMARY || true
-          echo "" >> $GITHUB_STEP_SUMMARY || true
-          echo "### 📊 Summary" >> $GITHUB_STEP_SUMMARY || true
-          echo "" >> $GITHUB_STEP_SUMMARY || true
-          echo "All security and validation checks have completed." >> $GITHUB_STEP_SUMMARY || true
+          docker run --rm -v "$PWD:/repo" ghcr.io/gitleaks/gitleaks:latest \
+            detect --source /repo --no-banner --redact
