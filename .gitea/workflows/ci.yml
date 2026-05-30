@@ -1,5 +1,4 @@
 ---
-# ci-sync: 2026-05-30T01:20:35Z
 # Homelab CI — Node/pages lane (git-ci-01) + secret scan (git-ci-02)
 name: CI
 
@@ -40,6 +39,15 @@ jobs:
       - name: npm ci
         run: |
           if [ -f package-lock.json ]; then npm ci; elif [ -f package.json ]; then npm install; else exit 0; fi
+
+      - name: Playwright browsers
+        run: |
+          if [ -f playwright.config.ts ] || [ -f playwright.config.js ] || [ -f playwright.config.mjs ] \
+             || grep -q '@playwright/test' package.json 2>/dev/null; then
+            npx playwright install --with-deps chromium
+          else
+            echo "No Playwright — skip browser install"
+          fi
 
       - name: Lint
         run: npm run lint --if-present
