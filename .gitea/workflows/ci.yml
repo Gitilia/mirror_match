@@ -11,6 +11,8 @@ on:
 jobs:
   skip-ci-check:
     runs-on: [homelab, self-hosted, linux]
+    container:
+      image: node:20-bookworm
     outputs:
       should-skip: ${{ steps.check.outputs.skip }}
     steps:
