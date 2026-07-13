@@ -1,0 +1,28 @@
+# Homelab bootstrap — gitleaks allowlist (tests, examples, placeholders)
+#
+# IMPORTANT: `useDefault = true` is required — without it gitleaks loads ONLY
+# this file (title + allowlist) with ZERO detection rules, so it would never
+# flag a real secret. Fixed 2026-07 (security-hardening track); if you're
+# re-pushing this template to a repo that already had the old version, that
+# repo's secret scanning was a no-op until this lands.
+title = "homelab gitea bootstrap"
+
+[extend]
+useDefault = true
+
+[allowlist]
+description = "Test fixtures and example configs are not production secrets"
+paths = [
+  '''(?i).*\.test\.(ts|tsx|js|jsx|py)$''',
+  '''(?i).*\.spec\.(ts|tsx|js|jsx)$''',
+  '''(?i).*/tests/.*''',
+  '''(?i).*/__tests__/.*''',
+  '''(?i).*\.example\.(yml|yaml|env|json|toml)$''',
+  '''(?i).*vault\.example\.(yml|yaml)$''',
+  '''(?i).*\.env\.example$''',
+]
+regexes = [
+  '''(?i)(invalid|fake|dummy|placeholder|example|changeme|change_me|not-a-real)''',
+  '''(?i)sk-or-invalid''',
+  '''(?i)msk-or-invalid''',
+]

@@ -1,0 +1,27 @@
+#!/usr/bin/env bash
+# Local pre-commit secret scan — mirrors the `secret-scanning` CI job (gitleaks)
+# so leaked secrets are caught before they ever leave your machine, not just at
+# CI time. Installed via `make install-git-hooks`.
+#
+# Uses the same .gitleaks.toml allowlist as CI. Only scans staged content.
+set -euo pipefail
+
+REPO_ROOT="$(git rev-parse --show-toplevel)"
+cd "$REPO_ROOT"
+
+if ! command -v gitleaks >/dev/null 2>&1; then
+  echo "⚠️  gitleaks not installed locally — skipping local secret scan."
+  echo "    Install: brew install gitleaks   (CI will still catch it either way)"
+  exit 0
+fi
+
+echo "🔐 Running gitleaks on staged changes..."
+if ! gitleaks protect --staged --config .gitleaks.toml --no-banner --redact; then
+  echo ""
+  echo "❌ gitleaks found a potential secret in your staged changes."
+  echo "   Fix it, or if it's a false positive, add an allowlist entry to .gitleaks.toml."
+  echo "   Bypass (not recommended): git commit --no-verify"
+  exit 1
+fi
+
+echo "✓ gitleaks: no secrets found in staged changes"
