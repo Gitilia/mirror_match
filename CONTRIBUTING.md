@@ -148,11 +148,11 @@ Write clear, descriptive commit messages:
 - **Reference issues:** If applicable, reference issue numbers
 
 **Examples:**
-- ✅ "Add password strength validation to change password form"
-- ✅ "Fix case-insensitive guess matching bug"
-- ✅ "Update README with new environment variables"
-- ❌ "Fixed stuff"
-- ❌ "Updates"
+- "Add password strength validation to change password form"
+- "Fix case-insensitive guess matching bug"
+- "Update README with new environment variables"
+- "Fixed stuff"
+- "Updates"
 
 ### Code Review Checklist
 

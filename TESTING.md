@@ -6,10 +6,10 @@ This guide will help you set up and test the MirrorMatch application locally.
 
 Before starting, ensure you have:
 
-- ✅ **Node.js 18+** installed (`node --version`)
-- ✅ **npm** installed (`npm --version`)
-- ✅ **PostgreSQL** installed and running (`psql --version`)
-- ✅ **Git** (if cloning the repository)
+- **Node.js 18+** installed (`node --version`)
+- **npm** installed (`npm --version`)
+- **PostgreSQL** installed and running (`psql --version`)
+- **Git** (if cloning the repository)
 
 ## Step-by-Step Setup
 
@@ -99,7 +99,7 @@ This creates the default admin user:
 - **Email:** `admin@mirrormatch.com`
 - **Password:** `admin123`
 
-⚠️ **Important:** Change this password after first login!
+ **Important:** Change this password after first login!
 
 ### 6. Start the Development Server
 
@@ -213,7 +213,7 @@ npm run db:generate
 **Error:** `Migration failed`
 
 **Solutions:**
-- Reset database (⚠️ deletes all data):
+- Reset database ( deletes all data):
   ```bash
   npm run db:push -- --force-reset
   ```
@@ -274,7 +274,7 @@ Opens a GUI at [http://localhost:5555](http://localhost:5555) to browse and edit
 
 ### Reset Database
 
-⚠️ **Warning:** This deletes all data!
+ **Warning:** This deletes all data!
 
 ```bash
 npm run db:push -- --force-reset
@@ -317,4 +317,4 @@ After testing locally:
 
 ---
 
-**Happy Testing! 🎯**
+**Happy Testing! **
