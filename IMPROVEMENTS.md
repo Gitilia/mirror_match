@@ -2,7 +2,7 @@
 
 This document contains ideas, suggestions, and potential enhancements to make MirrorMatch better, faster, and more professional.
 
-## 🚀 Performance Optimizations
+## Performance Optimizations
 
 ### Database & Query Optimization
 - [ ] **Add database indexes** - Create indexes on frequently queried fields (`Photo.createdAt`, `User.points`) to speed up queries
@@ -64,7 +64,7 @@ This document contains ideas, suggestions, and potential enhancements to make Mi
 - [ ] **CDN integration** - Add CDN for static assets and uploaded images to reduce server load
   - **Why:** Serving files from your server uses bandwidth and slows responses. A CDN serves files from locations closer to users, reducing latency by 50-80% and offloading server load.
 
-## 🎨 UI/UX Enhancements
+## UI/UX Enhancements
 
 ### User Interface
 - [ ] **Dark mode support** - Add dark mode toggle with user preference persistence
@@ -128,7 +128,7 @@ This document contains ideas, suggestions, and potential enhancements to make Mi
 - [ ] **Photo filtering** - Add filters to show: unguessed photos, correct guesses, wrong guesses, and photos by specific users
   - **Why:** Users want to focus on specific subsets of photos. Filtering helps users find unguessed photos to play, review their performance, or follow specific uploaders, significantly improving usability.
 
-## 🔒 Security Improvements
+## Security Improvements
 
 - [ ] **CSRF protection** - Implement CSRF tokens for all state-changing operations
   - **Why:** CSRF attacks can trick users into performing unwanted actions. CSRF protection is a security best practice that prevents unauthorized state changes and protects user accounts.
@@ -151,7 +151,7 @@ This document contains ideas, suggestions, and potential enhancements to make Mi
 - [ ] **Audit logging** - Log all admin actions for security auditing and compliance
   - **Why:** Admin actions can have significant impact. Audit logs provide accountability, help detect unauthorized access, and are essential for security compliance and incident investigation.
 
-## 📊 Features & Functionality
+## Features & Functionality
 
 ### Game Mechanics
 - [ ] **Streak tracking** - Track consecutive correct guesses and display current streak
@@ -208,7 +208,7 @@ This document contains ideas, suggestions, and potential enhancements to make Mi
 - [ ] **Photo approval workflow** - Add optional admin approval workflow (can be toggled on/off)
   - **Why:** Content moderation ensures quality and safety. An approval workflow lets admins control what goes public, prevents inappropriate content, and maintains content standards.
 
-## 🧪 Testing & Quality
+## Testing & Quality
 
 - [ ] **Increase test coverage** - Expand test coverage to all critical paths and edge cases
   - **Why:** Bugs in production are expensive and damage trust. Comprehensive tests catch issues early, reduce regressions, and give confidence when making changes.
@@ -237,7 +237,7 @@ This document contains ideas, suggestions, and potential enhancements to make Mi
 - [ ] **Error logging and monitoring** - Create comprehensive error logging and monitoring system
   - **Why:** You can't fix what you can't see. Error monitoring catches production bugs, provides context for debugging, and helps prioritize fixes based on impact.
 
-## 🔧 Technical Improvements
+## Technical Improvements
 
 ### Architecture
 - [ ] **Microservices migration** - Consider migrating to microservices if scale requires it

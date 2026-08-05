@@ -167,12 +167,12 @@ When adding new features, ensure:
 ## Known Security Considerations
 
 **Current Implementation:**
-- ✅ Passwords hashed with bcrypt
-- ✅ Session management via NextAuth
-- ✅ Route protection via middleware
-- ✅ Role-based access control
-- ✅ Input validation on server side
-- ✅ SQL injection prevention via Prisma
+- Passwords hashed with bcrypt
+- Session management via NextAuth
+- Route protection via middleware
+- Role-based access control
+- Input validation on server side
+- SQL injection prevention via Prisma
 
 **Future Considerations:**
 - Consider rate limiting for API routes
