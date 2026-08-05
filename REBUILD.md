@@ -56,7 +56,7 @@ pkill -f "next"
 sleep 2
 
 # Clean
-cd /home/beast/Code/mirrormatch
+cd /path/to/mirror_match
 rm -rf .next node_modules/.cache
 
 # Rebuild (production)
